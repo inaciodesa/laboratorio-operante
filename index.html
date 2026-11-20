@@ -1020,9 +1020,17 @@ $('#saves').addEventListener('click',e=>{
   if(d){ saves.splice(+d.dataset.del,1); persist(); renderSaves(); }
 });
 $('#btnDownload').addEventListener('click',()=>{
+  const nome='rato-tico-sessao-'+lab.session+'.json';
+  try{   // em aplicativos e celulares, usa a folha de compartilhamento do sistema
+    const arq=new File([JSON.stringify(snapshot())],nome,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[arq]})){
+      navigator.share({files:[arq],title:'Rato do Laboratório Operante'}).then(()=>{ $('#fileMsg').textContent='Arquivo compartilhado.'; }).catch(()=>{ $('#fileMsg').textContent='Compartilhamento cancelado.'; });
+      return;
+    }
+  }catch(_){}
   try{
     const url=URL.createObjectURL(new Blob([JSON.stringify(snapshot())],{type:'application/json'}));
-    const a=document.createElement('a'); a.href=url; a.download='rato-tico-sessao-'+lab.session+'.json'; document.body.appendChild(a); a.click(); a.remove();
+    const a=document.createElement('a'); a.href=url; a.download=nome; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
     $('#fileMsg').textContent='Arquivo gerado. Se nada foi baixado, esta visualização bloqueia downloads: use Salvar ponto ou a versão exportada.';
   }catch(_){ $('#fileMsg').textContent='Não foi possível gerar o arquivo neste navegador. Use Salvar ponto.'; }

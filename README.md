@@ -31,6 +31,7 @@ Baixe [`export/laboratorio-operante.html`](export/laboratorio-operante.html) e a
 | `exportar.py` | Gera a versão portátil em `export/` e a página em `docs/` |
 | `export/` | Versão portátil, que roda offline |
 | `docs/` | Cópia servida pelo GitHub Pages |
+| `mobile/` | Projetos nativos Android e iOS (Capacitor); veja [`mobile/README.md`](mobile/README.md) |
 
 Depois de editar o `index.html`, rode `python3 exportar.py`.
 

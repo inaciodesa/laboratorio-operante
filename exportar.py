@@ -33,4 +33,10 @@ docs = raiz / 'docs'; docs.mkdir(exist_ok=True)
 with zipfile.ZipFile(saida / 'laboratorio-operante.zip', 'w', zipfile.ZIP_DEFLATED) as z:
     z.write(saida / 'laboratorio-operante.html', 'laboratorio-operante/laboratorio-operante.html')
     z.write(saida / 'LEIA-ME.txt', 'laboratorio-operante/LEIA-ME.txt')
+# versão embutida nos aplicativos Android e iOS (mobile/www): ocupa a tela toda e respeita as áreas seguras
+movel = html.replace('content="width=device-width, initial-scale=1"', 'content="width=device-width, initial-scale=1, viewport-fit=cover"')
+movel = movel.replace('</head>', '<style>:root{padding-top:max(env(safe-area-inset-top,0px),var(--safe-area-inset-top,0px));padding-bottom:max(env(safe-area-inset-bottom,0px),var(--safe-area-inset-bottom,0px))}html{-webkit-text-size-adjust:100%}</style>\n</head>', 1)
+www = raiz / 'mobile' / 'www'
+if www.parent.exists():
+    www.mkdir(exist_ok=True); (www / 'index.html').write_text(movel, encoding='utf8')
 print('export gerado em', saida)
