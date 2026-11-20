@@ -169,6 +169,7 @@ h4{font-family:var(--cond);font-size:.8rem;text-transform:uppercase;letter-spaci
         <div class="chip">Agora: <b id="behav">explorando</b></div>
         <button class="maptog" id="btnMap" aria-pressed="false">Mapa de aprendizagem</button>
       </div>
+      <div class="panel" id="obsDock" hidden></div>
       <div class="actions">
         <button class="primary" id="btnPellet">Liberar pelota <kbd>espaço</kbd></button>
         <div class="tiles">
@@ -278,7 +279,7 @@ h4{font-family:var(--cond);font-size:.8rem;text-transform:uppercase;letter-spaci
         <div class="kv" id="ethoKv"></div>
         <h4>Treino de observação</h4>
         <p class="hint" id="obsInfo">Codifique o comportamento do rato por 90 s, como no registro por intervalos: toque na categoria (ou use as teclas 1 a 9 e 0) sempre que ele mudar de atividade. No fim, o programa compara o seu registro com o dele.</p>
-        <div class="keys" id="obsKeys"></div>
+        <div id="obsHome"><div class="keys" id="obsKeys"></div></div>
         <div class="row"><button class="primary" id="btnObs">Iniciar registro de 90 s</button></div>
         <p class="hint">Proporção do tempo desta sessão em cada categoria de comportamento. Registre a linha de base antes do treino e compare depois: aprender, aqui, é mudar a frequência de comportamentos que o rato já emitia.</p>
       </div>
@@ -527,7 +528,7 @@ class Lab {
     }
     if(cls!=='press'&&this.E[cls]!==undefined){ this.I[cls]+=0.04*this.S(cls); this.Ss[floorOf(r.x,r.y)]*=0.985; }
     const far=Math.hypot(tx-r.x,ty-r.y)>0.5;
-    r.act={cls,tx,ty,d,phase:far?'move':'do',el:0,pressAt:(cls==='rearLever'&&R()<0.15)?0.25+0.3*R():-1};
+    r.act={cls,tx,ty,d,phase:far?'move':'do',el:0,pressAt:(cls==='rearLever'&&R()<0.05+0.3*this.S('rearLever'))?0.25+0.3*R():-1};
     if(!far&&cls!=='press'&&this.tr[cls]!==undefined) this.tr[cls]=1;
   }
   endAct(){
@@ -552,7 +553,7 @@ class Lab {
       ['rear',(0.35+G*this.S('rear')*sub)*(1+2*F)],
       ['nearLever',0.07+G*this.S('nearLever')*sub*gate],
       ['rearLever',(atL?0.05:0.005)+G*(this.S('rearLever')+0.12*this.S('nearLever')+(atL?0.15*this.S('rear'):0))*sub*gate],
-      ['press',((atL?0.002:0.0005)+G*Math.pow(sp,1.5))*gate*(prev==='press'?2.5:1)],
+      ['press',((atL?0.001:0.0003)+G*Math.pow(sp,1.5))*gate*(prev==='press'?2.5:1)],
       ['check',0.05+0.25*this.V*m+6*this.Hs*m+(this.pellets.length?2.5:0)]
     ];
     let tot=0; for(const x of w) tot+=x[1];
@@ -843,13 +844,14 @@ const SH={EXT:'EXT: nenhuma pressão é reforçada.',CRF:'CRF: cada pressão é 
   FI:'FI t: a primeira pressão depois de t segundos do último reforço é reforçada.',
   VI:'VI t: a primeira pressão depois de um intervalo que varia em torno de t segundos é reforçada.'};
 const DEF={FR:5,VR:10,FI:30,VI:30};
-$$('#schedSeg button').forEach(b=>b.addEventListener('click',()=>{
-  selSched=b.dataset.s; $$('#schedSeg button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+function pickSched(t,n){
+  selSched=t; $$('#schedSeg button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.s===t)));
   const inp=$('#schedN'), has=!!DEF[selSched];
-  inp.disabled=!has; if(has) inp.value=DEF[selSched];
+  inp.disabled=!has; if(has) inp.value=n||DEF[selSched];
   $('#schedNLab').textContent=!has?'Parâmetro':(selSched[1]==='R'?'n (respostas)':'t (segundos)');
   $('#schedHint').textContent=SH[selSched];
-}));
+}
+$$('#schedSeg button').forEach(b=>b.addEventListener('click',()=>pickSched(b.dataset.s)));
 $('#btnSched').addEventListener('click',()=>{
   const n=Math.max(2,Math.min(300,Math.round(+$('#schedN').value||2)));
   if(DEF[selSched]) $('#schedN').value=n;
@@ -868,7 +870,7 @@ $('#btnReset').addEventListener('click',()=>{ $('#resetConfirm').hidden=false; }
 $('#btnResetNo').addEventListener('click',()=>{ $('#resetConfirm').hidden=true; });
 $('#btnResetYes').addEventListener('click',()=>{
   lab.reset(); doneSet.clear(); for(const k in flags) flags[k]=(typeof flags[k]==='number')?0:false;
-  $('#log').innerHTML=''; $('#resetConfirm').hidden=true; renderTrials(); curEx=null; showEx('base'); log('Novo rato ingênuo na câmara.');
+  $('#log').innerHTML=''; $('#resetConfirm').hidden=true; pickSched('CRF'); endObsUI(); renderTrials(); curEx=null; showEx('base'); log('Novo rato ingênuo na câmara.');
 });
 $('#btnQueue').addEventListener('click',()=>{
   const v=$('#trialType').value, n=Math.max(1,Math.min(20,Math.round(+$('#trialN').value||1)));
@@ -966,12 +968,19 @@ function catOf(a){
 function pickCat(i){ obs.sel=i; $$('#obsKeys button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.cat===i))); }
 $('#obsKeys').addEventListener('click',e=>{ const b=e.target.closest('[data-cat]'); if(b) pickCat(+b.dataset.cat); });
 $('#btnObs').addEventListener('click',()=>{
-  if(obs.on){ obs.on=false; $('#btnObs').textContent='Iniciar registro de 90 s'; $('#obsInfo').textContent='Registro cancelado.'; return; }
+  if(obs.on){ endObsUI(); $('#obsInfo').textContent='Registro cancelado.'; return; }
   Object.assign(obs,{on:true,t0:lab.t,next:lab.t+0.5,sel:-1,prev:catOf(lab.rat.act),n:0,hit:0,u:[],m:[]}); pickCat(-1);
   speed=1; $$('[data-speed]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.speed==='1')));
   if(paused) $('#btnPause').click();
   $('#btnObs').textContent='Cancelar registro'; curEx=null; showEx('obs');
+  const dock=$('#obsDock'); dock.hidden=false; dock.append($('#obsInfo'),$('#obsKeys'),$('#btnObs').parentNode);   // teclas junto à câmara
+  $('.chamber').scrollIntoView({block:'nearest'});
 });
+function endObsUI(){
+  obs.on=false; $('#btnObs').textContent='Iniciar registro de 90 s';
+  const home=$('#obsHome'); if($('#obsDock').hidden) return;
+  home.before($('#obsInfo')); home.append($('#obsKeys')); home.after($('#btnObs').parentNode); $('#obsDock').hidden=true;
+}
 function obsTick(){
   if(!obs.on) return;
   while(lab.t>=obs.next&&obs.on){
@@ -982,7 +991,7 @@ function obsTick(){
   if(obs.on) $('#obsInfo').textContent=`Registrando: faltam ${fmt(obs.t0+90-lab.t)}. Categoria atual: ${obs.sel<0?'nenhuma':CATS[obs.sel]}.`;
 }
 function obsEnd(){
-  obs.on=false; $('#btnObs').textContent='Iniciar registro de 90 s';
+  endObsUI();
   const n=obs.n, p0=obs.hit/n; let pe=0; const conf={};
   for(let c=0;c<10;c++){ pe+=(obs.u.filter(x=>x===c).length/n)*(obs.m.filter(x=>x===c).length/n); }
   for(let i=0;i<n;i++) if(obs.u[i]!==obs.m[i]){ const k=obs.m[i]+'>'+obs.u[i]; conf[k]=(conf[k]||0)+1; }
@@ -1013,7 +1022,7 @@ function restore(o){
   if(!o||o.app!=='laboratorio-operante'||!o.lab||!Array.isArray(o.lab.presses)) throw new Error('formato');
   Object.assign(P,PDEF,o.P||{}); lab.load(o.lab);
   if(o.ui){ for(const k in flags) if(k in (o.ui.flags||{})) flags[k]=o.ui.flags[k]; doneSet.clear(); (o.ui.done||[]).forEach(k=>doneSet.add(k)); }
-  obs.on=false; syncParams(); renderTrials(); renderSteps(); log(`Rato restaurado: ${o.nome||'arquivo'}.`);
+  endObsUI(); pickSched(lab.sched.type,lab.sched.n); syncParams(); renderTrials(); renderSteps(); log(`Rato restaurado: ${o.nome||'arquivo'}.`);
 }
 function renderSaves(){
   $('#saves').innerHTML=saves.map((s,i)=>`<li><span>${s.nome}</span><span><button data-load="${i}">Restaurar</button> <button data-del="${i}">Excluir</button></span></li>`).join('');
@@ -1040,7 +1049,7 @@ function baixar(nome){
     const url=URL.createObjectURL(new Blob([JSON.stringify(snapshot())],{type:'application/json'}));
     const a=document.createElement('a'); a.href=url; a.download=nome; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
-    $('#fileMsg').textContent='Arquivo gerado. Se nada foi baixado, esta visualização bloqueia downloads: use Salvar ponto ou a versão exportada.';
+    $('#fileMsg').textContent='Arquivo '+nome+' gerado. Se o download não começar, use Salvar ponto.';
   }catch(_){ $('#fileMsg').textContent='Não foi possível gerar o arquivo neste navegador. Use Salvar ponto.'; }
 }
 $('#btnOpen').addEventListener('click',()=>$('#fileOpen').click());
