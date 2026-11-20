@@ -436,15 +436,16 @@ class Lab {
     this.events.push({type:'press',hit});
     if(hit) this.deliver(true,irt);
     else {
-      this.I.press+=P.beta*this.S('press')/Math.max(1,this.Nhat);
-      this.Ss[floorOf(this.rat.x,this.rat.y)]*=1-P.beta/Math.max(1,this.Nhat);
+      const tol=Math.pow(Math.max(1,this.Nhat),0.6);   // tolerância à falta de reforço cresce com o que o rato aprendeu a esperar
+      this.I.press+=P.beta*this.S('press')/tol;
+      this.Ss[floorOf(this.rat.x,this.rat.y)]*=1-P.beta/tol;
       if(this.run>3*this.Nhat+2) this.F+=0.08*(1-this.F);
     }
   }
   reinforce(d){
     if(d<=0.001) return;
     for(const c of CLASSES){ const g=d*this.tr[c]; if(g<=0) continue;
-      this.E[c]+=P.alpha*g*(1-this.E[c]); this.I[c]*=1-0.3*g; }
+      this.E[c]+=P.alpha*g*(1-this.E[c]); this.I[c]*=1-0.5*g; }
     for(let i=0;i<19;i++){ const g=d*this.trs[i]; if(g>0.001) this.Ss[i]+=P.alpha*g*(1-this.Ss[i]); }
   }
   closeR(){ return 16+60*this.V*this.V; }
@@ -492,7 +493,7 @@ class Lab {
       this.reinforce(1-p.V);                      // reforço primário: o que o clique não previu
       const cg=Math.exp(-(t-p.t)/4);
       this.V=clamp(this.V+P.alphaV*(1-this.V)*cg-0.05*this.V*(1-cg),0,1);
-      if(!this.insatiable) this.hunger=Math.max(0,this.hunger-0.003); this.A+=P.gainA*(1-this.A); this.stats.eaten++;
+      if(!this.insatiable) this.hunger=Math.max(0,this.hunger-0.0015); this.A+=P.gainA*(1-this.A); this.stats.eaten++;
     }
     if(this.rat.act.cls==='check') this.Hs+=0.3*(1-this.Hs);
     this.pellets=[]; this.setAct('eat'); this.events.push({type:'eat',n});
@@ -553,7 +554,7 @@ class Lab {
       ['nearLever',0.07+G*this.S('nearLever')*sub*gate],
       ['rearLever',(atL?0.05:0.005)+G*(this.S('rearLever')+0.12*this.S('nearLever')+(atL?0.15*this.S('rear'):0))*sub*gate],
       ['press',((atL?0.002:0.0005)+G*Math.pow(sp,1.5))*gate*(prev==='press'?2.5:1)],
-      ['check',0.05+0.25*this.V*m+6*this.Hs*m+(this.pellets.length?0.8:0)]
+      ['check',0.05+0.25*this.V*m+6*this.Hs*m+(this.pellets.length?2.5:0)]
     ];
     let tot=0; for(const x of w) tot+=x[1];
     let u=this.rand()*tot;
@@ -692,7 +693,7 @@ const EX = {
     b:'Agora nem toda pressão é reforçada. Esquemas de razão dependem do número de respostas; esquemas de intervalo dependem do tempo desde o último reforço, mais uma resposta. Cada um produz um padrão próprio no registro cumulativo.',
     o:'Passe por FR, VR, FI e VI por alguns minutos cada (16× ajuda) e compare inclinações e pausas.',
     m:'Aumente a exigência aos poucos: CRF, FR 3, FR 6, FR 12. Um salto direto para FR 50 extingue a resposta antes do primeiro reforço.',
-    q:'Inibição por pressão não reforçada = 0,045 · força / N̂. O rato tolera a falta de reforço na medida do que já aprendeu a esperar.'},
+    q:'Inibição por pressão não reforçada = 0,045 · força / N̂^0,6. O rato tolera a falta de reforço na medida do que já aprendeu a esperar.'},
   FR:{e:'Esquema de razão', t:'Razão fixa (FR)',
     b:'A enésima resposta desde o último reforço é reforçada. O padrão típico é pausa após o reforço seguida de uma corrida em taxa alta até o próximo.',
     o:'Degraus no registro: trecho plano (pausa) e subida íngreme. A pausa cresce quando você aumenta a razão.',
@@ -717,7 +718,7 @@ const EX = {
     b:'A pressão deixa de produzir comida e clique. A resposta declina aos poucos. Às vezes, antes de cair, a taxa e a variabilidade sobem por um momento (jorro de extinção).',
     o:'A curva vai deitando até ficar plana. Repita depois de CRF e depois de VR 20 e compare no Diário quantas respostas o rato emite até parar.',
     m:'O jorro não é regra: apareceu em 24% dos 113 casos aplicados revistos por Lerman e Iwata (1995). E extinção não apaga o aprendizado. É aprendizagem nova, inibitória e dependente do contexto (Bouton, 2004).',
-    q:'Força líquida = E − I. Na extinção só I cresce: ΔI = 0,045 · (E − I) / N̂. Treino intermitente deixa N̂ alto e a extinção lenta: o efeito do reforço parcial.'},
+    q:'Força líquida = E − I. Na extinção só I cresce: ΔI = 0,045 · (E − I) / N̂^0,6. Treino intermitente deixa N̂ alto e a extinção lenta: o efeito do reforço parcial.'},
   rec:{e:'Etapa 7', t:'Recuperação espontânea',
     b:'Depois de extinguir a resposta, inicie uma nova sessão mantendo a extinção. Sem nenhum reforço novo, o rato volta a pressionar, menos que antes, e para mais rápido.',
     o:'Um pequeno surto de pressões no início da sessão e nova queda. Se você religar o reforço, a resposta volta em poucas pelotas (reaquisição rápida).',
@@ -752,7 +753,7 @@ const EX = {
     b:'O rato já comeu bastante nesta sessão. A comida perdeu parte do valor reforçador e a taxa está caindo, embora a contingência esteja intacta.',
     o:'A curva deita aos poucos, como na extinção, mas os reforços continuam sendo entregues.',
     m:'Privação e saciação são operações motivadoras: alteram o valor do reforçador e a frequência do comportamento que o produz, sem mudar o que o animal aprendeu. Inicie uma nova sessão para restaurar a privação.',
-    q:'Motivação = privação / 0,6, limitada a 1. Cada pelota de 45 mg reduz a privação em 0,003.'}
+    q:'Motivação = privação / 0,6, limitada a 1. Cada pelota de 45 mg reduz a privação em 0,0015.'}
 };
 let curEx = null;
 function showEx(k){
@@ -1028,18 +1029,21 @@ $('#btnDownload').addEventListener('click',()=>{
   const nome='rato-tico-sessao-'+lab.session+'.json';
   try{   // em aplicativos e celulares, usa a folha de compartilhamento do sistema
     const arq=new File([JSON.stringify(snapshot())],nome,{type:'application/json'});
-    if(navigator.canShare&&navigator.canShare({files:[arq]})){
-      navigator.share({files:[arq],title:'Rato do Laboratório Operante'}).then(()=>{ $('#fileMsg').textContent='Arquivo compartilhado.'; }).catch(()=>{ $('#fileMsg').textContent='Compartilhamento cancelado.'; });
+    if(window.matchMedia&&matchMedia('(pointer: coarse)').matches&&navigator.canShare&&navigator.canShare({files:[arq]})){
+      navigator.share({files:[arq],title:'Rato do Laboratório Operante'}).then(()=>{ $('#fileMsg').textContent='Arquivo compartilhado.'; }).catch(e=>{ if(e&&e.name==='AbortError') $('#fileMsg').textContent='Compartilhamento cancelado.'; else baixar(nome); });
       return;
     }
   }catch(_){}
+  baixar(nome);
+});
+function baixar(nome){
   try{
     const url=URL.createObjectURL(new Blob([JSON.stringify(snapshot())],{type:'application/json'}));
     const a=document.createElement('a'); a.href=url; a.download=nome; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
     $('#fileMsg').textContent='Arquivo gerado. Se nada foi baixado, esta visualização bloqueia downloads: use Salvar ponto ou a versão exportada.';
   }catch(_){ $('#fileMsg').textContent='Não foi possível gerar o arquivo neste navegador. Use Salvar ponto.'; }
-});
+}
 $('#btnOpen').addEventListener('click',()=>$('#fileOpen').click());
 $('#fileOpen').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -1090,7 +1094,7 @@ function drawChamber(now){
     cx.font='500 2.4px "IBM Plex Mono",monospace'; cx.textAlign='center';
     for(let i=0;i<9;i++){ const x=(i%3)*33.34, y=8+Math.floor(i/3)*18.67, v=lab.Ss[i];
       cx.globalAlpha=0.5*v; cx.fillStyle=C.accent; cx.fillRect(x,y,33.34,18.67); cx.globalAlpha=1;
-      cx.strokeStyle=C.muted; cx.lineWidth=0.15; cx.strokeRect(x,y,33.34,18.67); cx.fillStyle=C.ink; cx.fillText(num(v),x+16.7,y+16.5); }
+      cx.strokeStyle=C.muted; cx.lineWidth=0.15; cx.strokeRect(x,y,33.34,18.67); cx.fillStyle=C.ink; cx.fillText(num(v),x+16.7,y+3.4); }
     for(let j=0;j<10;j++){ const w=wallPoint(j), v=lab.Ss[9+j]; cx.fillStyle=C.food; cx.globalAlpha=0.15+0.85*v; cx.beginPath(); cx.arc(w[0],w[1]+(j<3?-2.5:j<6?2.5:0),1.2+1.6*v,0,7); cx.fill(); cx.globalAlpha=1; }
     cx.strokeStyle=C.food; cx.lineWidth=0.4; cx.setLineDash([1.5,1.5]); cx.beginPath(); cx.arc(GEO.hopper.x,GEO.hopper.y,lab.closeR(),0,7); cx.stroke(); cx.setLineDash([]);
   }
