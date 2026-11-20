@@ -1,0 +1,1198 @@
+<meta charset="utf-8">
+<title>Laboratório Operante</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="author" content="Alana Campos de Sá">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: bancada de laboratório. Coluna larga com a câmara e o registrador de papel;
+   coluna estreita com o caderno (explicação + painéis). Uma só cor de destaque; âmbar = comida, vermelho = choque. */
+:root{
+  --bg:#e9edf1; --panel:#f6f8fa; --raised:#ffffff; --ink:#15202b; --muted:#566575; --line:#cbd4dc;
+  --accent:#0a6c8c; --accent-ink:#ffffff; --food:#b06500; --shock:#c23a2b; --ok:#27774a;
+  --paper:#f3f8ec; --paper-grid:#cddbbd; --pen:#1b2a6b;
+  --floor:#dde3e8; --rod:#aeb8c2; --wall:#8793a0; --metal:#eef2f5; --fur:#f6f3ec; --hood:#3b3531; --skin:#e7a9a0;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f151b; --panel:#161e26; --raised:#1d2731; --ink:#e4ebf2; --muted:#94a4b4; --line:#2d3a46;
+  --accent:#54b9d8; --accent-ink:#06222c; --food:#eeaa45; --shock:#ef6a5a; --ok:#5fc48a;
+  --paper:#17211b; --paper-grid:#2b3b30; --pen:#a9c1ff;
+  --floor:#202a33; --rod:#3c4956; --wall:#566472; --metal:#2b3742; --fur:#ece8df; --hood:#4a423c; --skin:#d9988f;
+  color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f151b; --panel:#161e26; --raised:#1d2731; --ink:#e4ebf2; --muted:#94a4b4; --line:#2d3a46;
+  --accent:#54b9d8; --accent-ink:#06222c; --food:#eeaa45; --shock:#ef6a5a; --ok:#5fc48a;
+  --paper:#17211b; --paper-grid:#2b3b30; --pen:#a9c1ff;
+  --floor:#202a33; --rod:#3c4956; --wall:#566472; --metal:#2b3742; --fur:#ece8df; --hood:#4a423c; --skin:#d9988f;
+  color-scheme:dark }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+.app{max-width:1280px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--cond);font-weight:600;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:1.7rem;line-height:1.1}
+h2{font-size:1.05rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+h3{font-size:1.25rem;line-height:1.2}
+p{margin:0}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--raised);border-radius:6px;padding:7px 12px;min-height:36px}
+button:hover{border-color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button[aria-pressed="true"],button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+select,input[type=number]{background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-height:36px}
+kbd{font-family:var(--mono);font-size:.78em;border:1px solid currentColor;border-radius:4px;padding:0 5px;opacity:.8}
+
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.byline{font-size:.95rem;margin-top:2px}.byline b{font-weight:600}
+.foot{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:14px}
+.top .sub{color:var(--muted);font-family:var(--mono);font-size:.82rem;margin-top:4px}
+.transport{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.seg{display:flex}
+.seg button{border-radius:0;margin-left:-1px;min-width:44px}
+.seg button:first-child{border-radius:6px 0 0 6px;margin-left:0}
+.seg button:last-child{border-radius:0 6px 6px 0}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+.chamber{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--floor)}
+.chamber canvas{display:block;width:100%;aspect-ratio:100/64}
+.chip{position:absolute;left:10px;bottom:10px;background:var(--raised);border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:.85rem;max-width:calc(100% - 20px)}
+.chip b{font-weight:600}
+.maptog{position:absolute;right:10px;bottom:8px;min-height:30px;padding:3px 10px;font-size:.82rem;border-radius:999px}
+@media (max-width:520px){.chip{bottom:44px}}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px}
+.keys button{text-align:left;padding:5px 8px;min-height:34px;font-size:.85rem}
+.saves{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:.85rem}
+.saves li{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between}
+.saves button{min-height:30px;padding:3px 9px}
+input[type=range]{flex:1 1 120px;min-width:0;accent-color:var(--accent)}
+h4{font-family:var(--cond);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.actions .primary{flex:1 1 220px;font-size:1rem;min-height:48px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;flex:3 1 320px}
+@media (max-width:520px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 10px;min-width:0}
+.tile span{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile strong{font-family:var(--mono);font-weight:500;font-size:1.15rem;font-variant-numeric:tabular-nums}
+
+.record{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px 8px;display:flex;flex-direction:column;gap:6px}
+.record .head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center}
+.record canvas{display:block;width:100%;height:240px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.78rem;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:0;border-top:2px solid var(--pen);vertical-align:middle;margin-right:5px}
+.legend i.sr{border-color:var(--food);transform:rotate(50deg);width:9px}
+.legend i.cs{border-top:5px solid var(--accent)}
+.legend i.us{border-top:5px solid var(--shock);width:5px}
+
+.card{background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.card .eyebrow{font-family:var(--mono);font-size:.74rem;text-transform:uppercase;letter-spacing:.09em;color:var(--accent)}
+.card p{max-width:65ch}
+.card dl{margin:0;display:grid;gap:8px}
+.card dt{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.card dd{margin:0;max-width:65ch}
+.card dd.eq{font-family:var(--mono);font-size:.83rem;background:var(--panel);border-radius:4px;padding:6px 8px;overflow-x:auto}
+
+.tabs{display:flex;flex-wrap:wrap;gap:4px}
+.tabs button{flex:1 1 auto;padding:6px 8px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row label{font-size:.85rem;color:var(--muted)}
+.hint{font-size:.85rem;color:var(--muted);max-width:65ch}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.steps button{width:100%;text-align:left;border:0;background:none;display:grid;grid-template-columns:26px minmax(0,1fr);gap:8px;padding:8px 6px;border-radius:6px;min-height:0}
+.steps button:hover{background:var(--raised)}
+.steps .mark{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--muted);display:grid;place-items:center;font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:1px}
+.steps .done .mark{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+.steps .cur .mark{border-color:var(--accent);color:var(--accent);border-width:2px}
+.steps b{font-weight:600;display:block}
+.steps small{color:var(--muted);font-size:.84rem;display:block}
+.bars{display:grid;gap:9px}
+.bar .lab{display:flex;justify-content:space-between;gap:8px;font-size:.85rem}
+.bar .lab em{font-style:normal;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.bar .track{height:7px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:3px}
+.bar .fill{height:100%;width:0;background:var(--accent);border-radius:4px}
+.bar.food .fill{background:var(--food)} .bar.fear .fill{background:var(--shock)}
+.bar small{color:var(--muted);font-size:.76rem}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;font-size:.85rem}
+.kv span:nth-child(even){font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.trials{display:flex;align-items:flex-end;gap:3px;height:96px;border-bottom:1px solid var(--line);position:relative;overflow-x:auto;padding-top:4px}
+.trials::before{content:"0,5 = sem supressão";position:absolute;left:0;right:0;top:calc(100% - 80px);border-top:1px dashed var(--muted);font-size:.68rem;color:var(--muted);font-family:var(--mono);pointer-events:none}
+.trials div{flex:0 0 16px;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;position:relative}
+.trials div.us{background:var(--shock)}
+.trials div.na{background:var(--line)}
+.tl{display:flex;gap:3px;font-family:var(--mono);font-size:.6rem;color:var(--muted);overflow:hidden}
+.tl span{flex:0 0 16px;text-align:center}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;font-size:.86rem}
+.log time{font-family:var(--mono);color:var(--muted);font-size:.78rem;margin-right:8px}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid var(--shock);border-radius:6px;padding:8px 10px;font-size:.88rem}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px}
+.notes section{display:flex;flex-direction:column;gap:10px;min-width:0}
+.notes ul{margin:0;padding-left:1.1em;display:grid;gap:8px;max-width:65ch}
+.notes li b{font-weight:600}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>Laboratório Operante</h1>
+      <p class="byline">por <b>Alana Campos de Sá</b></p>
+      <p class="sub" id="sub">Sujeito R-07 “Tico” · sessão 1 · 00:00</p>
+    </div>
+    <div class="transport">
+      <button id="btnPause" aria-pressed="false">Pausar</button>
+      <div class="seg" role="group" aria-label="Velocidade da simulação">
+        <button data-speed="1" aria-pressed="true">1×</button>
+        <button data-speed="4" aria-pressed="false">4×</button>
+        <button data-speed="16" aria-pressed="false">16×</button>
+        <button data-speed="60" aria-pressed="false">60×</button>
+      </div>
+      <button id="btnSound" aria-pressed="false">Som</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <div class="chamber">
+        <canvas id="chamber" aria-label="Vista superior da câmara operante com o rato, a barra, o comedouro, a luz e o alto-falante"></canvas>
+        <div class="chip">Agora: <b id="behav">explorando</b></div>
+        <button class="maptog" id="btnMap" aria-pressed="false">Mapa de aprendizagem</button>
+      </div>
+      <div class="actions">
+        <button class="primary" id="btnPellet">Liberar pelota <kbd>espaço</kbd></button>
+        <div class="tiles">
+          <div class="tile"><span>Resp/min</span><strong id="mRate">0</strong></div>
+          <div class="tile"><span>Pressões</span><strong id="mPress">0</strong></div>
+          <div class="tile"><span>Reforços</span><strong id="mSr">0</strong></div>
+          <div class="tile"><span>Esquema</span><strong id="mSched">CRF</strong></div>
+        </div>
+      </div>
+      <div class="record">
+        <div class="head">
+          <h2>Registro cumulativo</h2>
+          <div class="row"><label for="recWin">Janela</label>
+            <select id="recWin"><option value="300">5 min</option><option value="900">15 min</option><option value="3600">60 min</option></select></div>
+        </div>
+        <canvas id="record" aria-label="Registro cumulativo de pressões à barra"></canvas>
+        <div class="legend">
+          <span><i></i>pena: sobe um passo a cada pressão; inclinação = taxa</span>
+          <span><i class="sr"></i>reforço</span>
+          <span>linhas verticais fortes: a cada 5 min</span>
+          <span><i class="cs"></i>estímulo condicionado</span>
+          <span><i class="us"></i>choque</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <article class="card" id="explain" aria-live="polite"></article>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="roteiro" aria-selected="true">Roteiro</button>
+        <button role="tab" data-tab="esquemas" aria-selected="false">Esquemas</button>
+        <button role="tab" data-tab="pavlov" aria-selected="false">Pavloviano</button>
+        <button role="tab" data-tab="etograma" aria-selected="false">Etograma</button>
+        <button role="tab" data-tab="modelo" aria-selected="false">Variáveis</button>
+        <button role="tab" data-tab="diario" aria-selected="false">Diário</button>
+        <button role="tab" data-tab="avancado" aria-selected="false">Arquivo e parâmetros</button>
+      </div>
+
+      <div class="panel" data-panel="roteiro">
+        <ol class="steps" id="steps"></ol>
+        <p class="hint">Toque em uma etapa para ler a explicação. As etapas se marcam sozinhas quando o comportamento do rato atinge o critério.</p>
+      </div>
+
+      <div class="panel" data-panel="esquemas" hidden>
+        <div class="seg" role="group" aria-label="Tipo de esquema" id="schedSeg">
+          <button data-s="EXT" aria-pressed="false">EXT</button>
+          <button data-s="CRF" aria-pressed="true">CRF</button>
+          <button data-s="FR" aria-pressed="false">FR</button>
+          <button data-s="VR" aria-pressed="false">VR</button>
+          <button data-s="FI" aria-pressed="false">FI</button>
+          <button data-s="VI" aria-pressed="false">VI</button>
+        </div>
+        <div class="row">
+          <label for="schedN" id="schedNLab">Parâmetro</label>
+          <input type="number" id="schedN" min="2" max="300" value="5" style="width:90px" disabled>
+          <button class="primary" id="btnSched">Aplicar esquema</button>
+        </div>
+        <p class="hint" id="schedHint">CRF: cada pressão é reforçada.</p>
+        <div class="row">
+          <button id="btnSession">Nova sessão (24 h depois)</button>
+          <button id="btnPretrain">Pular modelagem</button>
+          <button id="btnReset">Novo rato ingênuo</button>
+        </div>
+        <div class="confirm" id="resetConfirm" hidden>
+          <span>Isso apaga todo o histórico deste rato.</span>
+          <button id="btnResetYes">Apagar e recomeçar</button>
+          <button id="btnResetNo">Cancelar</button>
+        </div>
+      </div>
+
+      <div class="panel" data-panel="pavlov" hidden>
+        <div class="row">
+          <label for="trialType">Tentativa</label>
+          <select id="trialType">
+            <option value="T+">Tom → choque</option>
+            <option value="L+">Luz → choque</option>
+            <option value="TL+">Tom + luz → choque</option>
+            <option value="T-">Tom sozinho</option>
+            <option value="L-">Luz sozinha</option>
+            <option value="TL-">Tom + luz, sem choque</option>
+          </select>
+          <label for="trialN">×</label>
+          <input type="number" id="trialN" min="1" max="20" value="6" style="width:70px">
+        </div>
+        <div class="row">
+          <label for="shockLv">Choque</label>
+          <select id="shockLv"><option value="0.5">fraco</option><option value="0.8">médio</option><option value="1" selected>forte</option></select>
+          <button class="primary" id="btnQueue">Programar</button>
+          <button id="btnClearQ">Esvaziar fila</button>
+        </div>
+        <p class="hint mono" id="qInfo">Fila vazia.</p>
+        <div>
+          <div class="trials" id="trials" aria-label="Razão de supressão por tentativa"></div>
+          <div class="tl" id="trialLabels"></div>
+        </div>
+        <p class="hint">Cada estímulo dura 20 s; o intervalo entre tentativas varia em torno de 90 s. A medida só vale com o rato pressionando de forma estável: use VI 30 e velocidade 16× ou 60×.</p>
+      </div>
+
+      <div class="panel" data-panel="modelo" hidden>
+        <div class="bars" id="bars"></div>
+        <div class="kv" id="kv"></div>
+        <p class="hint">São variáveis do modelo, não medidas do animal. Em um rato real só se observa o comportamento; estes números existem para você comparar a explicação com o que o registro mostra.</p>
+      </div>
+
+      <div class="panel" data-panel="etograma" hidden>
+        <div class="bars" id="etho"></div>
+        <div class="kv" id="ethoKv"></div>
+        <h4>Treino de observação</h4>
+        <p class="hint" id="obsInfo">Codifique o comportamento do rato por 90 s, como no registro por intervalos: toque na categoria (ou use as teclas 1 a 9 e 0) sempre que ele mudar de atividade. No fim, o programa compara o seu registro com o dele.</p>
+        <div class="keys" id="obsKeys"></div>
+        <div class="row"><button class="primary" id="btnObs">Iniciar registro de 90 s</button></div>
+        <p class="hint">Proporção do tempo desta sessão em cada categoria de comportamento. Registre a linha de base antes do treino e compare depois: aprender, aqui, é mudar a frequência de comportamentos que o rato já emitia.</p>
+      </div>
+
+      <div class="panel" data-panel="avancado" hidden>
+        <h4>Arquivo do rato</h4>
+        <p class="hint">Salve um ponto antes de cada mudança de esquema. Se a resposta extinguir, restaure o ponto em vez de recondicionar do zero.</p>
+        <div class="row">
+          <button class="primary" id="btnSave">Salvar ponto</button>
+          <button id="btnDownload">Baixar arquivo</button>
+          <button id="btnOpen">Abrir arquivo</button>
+          <input type="file" id="fileOpen" accept=".json,application/json" hidden>
+        </div>
+        <ul class="saves" id="saves"></ul>
+        <p class="hint" id="fileMsg">Os pontos ficam neste navegador. Para levar o rato a outro computador, baixe o arquivo (o download funciona na versão exportada, aberta direto no navegador).</p>
+        <h4>Parâmetros de aprendizagem</h4>
+        <div class="row"><label for="pAlpha">Velocidade de aprendizagem</label><input type="range" id="pAlpha" data-p="alpha" min="0.04" max="0.3" step="0.01" value="0.12"><span class="mono" id="pAlphaV">0,12</span></div>
+        <div class="row"><label for="pBeta">Velocidade de extinção</label><input type="range" id="pBeta" data-p="beta" min="0.01" max="0.12" step="0.005" value="0.045"><span class="mono" id="pBetaV">0,045</span></div>
+        <div class="row"><label for="pTau">Janela de crédito (s)</label><input type="range" id="pTau" data-p="tauTr" min="0.5" max="4" step="0.1" value="1.5"><span class="mono" id="pTauV">1,5</span></div>
+        <div class="row"><label for="pAv">Treino ao comedouro</label><input type="range" id="pAv" data-p="alphaV" min="0.05" max="0.4" step="0.01" value="0.18"><span class="mono" id="pAvV">0,18</span></div>
+        <div class="row"><label for="varDist">Esquemas variáveis</label>
+          <select id="varDist"><option value="exp">probabilidade constante</option><option value="uni">uniforme de 1 a 2n (artigo de 1994)</option></select></div>
+        <div class="row"><input type="checkbox" id="insat"><label for="insat">Rato insaciável, como no programa de 1994</label></div>
+        <div class="row"><button id="btnDefaults">Restaurar parâmetros padrão</button></div>
+      </div>
+
+      <div class="panel" data-panel="diario" hidden>
+        <ul class="log" id="log"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h2>Equívocos frequentes</h2>
+      <ul>
+        <li><b>Reforço negativo não é punição.</b> Reforço sempre aumenta a frequência da resposta. No negativo, a resposta remove ou evita algo aversivo. Punição diminui a frequência.</li>
+        <li><b>Reforçador se define pelo efeito.</b> Comida só é reforçador se a resposta que a produz ficar mais frequente. Com o rato saciado, a mesma pelota deixa de funcionar.</li>
+        <li><b>Esquemas de intervalo exigem resposta.</b> Em FI 30 s nada é entregue “a cada 30 s”. O reforço fica disponível após 30 s e só vem com a primeira pressão depois disso.</li>
+        <li><b>Extinção não é esquecimento.</b> É aprender que a resposta não produz mais o reforço. O aprendizado original permanece, e por isso a resposta volta após descanso, mudança de contexto ou um único reforço.</li>
+        <li><b>O choque da supressão condicionada não pune.</b> Ele chega ao fim do tom, faça o rato o que fizer. A queda nas pressões vem do congelamento eliciado pelo tom.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Limites deste modelo</h2>
+      <ul>
+        <li>Os parâmetros são ilustrativos. Eles reproduzem a forma dos efeitos clássicos, sem ajuste a dados de um experimento específico.</li>
+        <li>O rato combina três ideias: erro de predição com traço de elegibilidade (crédito cai em cerca de 1,5 s), inibição separada para a extinção, e ativação proporcional à taxa de reforço. Outros modelos explicam os mesmos dados de forma diferente.</li>
+        <li>A parte pavloviana segue Rescorla e Wagner (1972). Esse modelo erra em casos conhecidos, como a inibição latente e a extinção de inibidores condicionados.</li>
+        <li>Não há punição contingente, discriminação de estímulos, fuga ou esquiva, nem medo do contexto após os choques.</li>
+        <li>Uma simulação serve para treinar o raciocínio experimental. Ela não substitui a observação de animais nem autoriza conclusões sobre eles.</li>
+      </ul>
+    </section>
+  </div>
+  <div class="notes">
+    <section>
+      <h2>Ponto de partida: Sniffy (1994)</h2>
+      <p style="max-width:65ch">Este laboratório parte do programa descrito por Graham, Alloway e Krames. Do artigo vêm os dois laboratórios (treino ao comedouro e modelagem; reforço parcial e resistência à extinção), o repertório de comportamentos sorteados por frequência relativa, o bebedouro, os 9 setores de piso e 10 de parede que viram atratores, o círculo de “perto o bastante” do comedouro, os arquivos de rato salvos antes de cada mudança, os parâmetros ajustáveis, a janela de depuração (aqui, o Mapa de aprendizagem e a aba Variáveis) e o registro de comportamentos por teclas com índice de concordância. O que muda:</p>
+      <ul>
+        <li><b>Saciação.</b> O rato de 1994 era insaciável, e os autores apontavam isso como a razão de ser mais fácil de treinar que um rato real. Aqui a comida perde valor ao longo da sessão.</li>
+        <li><b>Recuperação espontânea.</b> Não existia no original, que só tinha um contador de associações que subia e descia. Aqui a extinção cria inibição separada, que cede em parte com o descanso.</li>
+        <li><b>Padrões dos esquemas.</b> No original o rato “adivinhava” o esquema em vigor e as frequências eram ajustadas para os padrões saírem certos. Aqui pausas, corridas e festões resultam de estimação de tempo e da taxa de reforço.</li>
+        <li><b>Aprendizagem.</b> Sai a curva logística sobre o número de pareamentos; entra o erro de predição, com crédito que decai em cerca de 1,5 s após a resposta.</li>
+        <li><b>Condicionamento pavloviano.</b> Ausente no original; aqui há supressão condicionada, bloqueio e sombreamento.</li>
+      </ul>
+      <p class="hint">Graham, J., Alloway, T., &amp; Krames, L. (1994). Sniffy, the virtual rat: Simulated operant conditioning. <i>Behavior Research Methods, Instruments, &amp; Computers, 26</i>(2), 134–141.</p>
+    </section>
+    <section>
+      <h2>Perguntas para o relatório</h2>
+      <ul>
+        <li>Qual era o nível operante da pressão à barra antes do treino? Como o etograma mudou depois da modelagem?</li>
+        <li>Quantas respostas e quanto tempo a extinção leva depois de CRF? E depois de VR 20? (O Diário registra os dois números.)</li>
+        <li>Saindo direto de CRF, qual é o maior valor de FR, VR, FI ou VI que ainda mantém a resposta?</li>
+        <li>Subindo em passos pequenos, até que valor você consegue levar o mesmo esquema? Documente cada mudança e o que aconteceu.</li>
+        <li>Em que os registros cumulativos de FR e FI se parecem e em que diferem? E os de VR e VI?</li>
+        <li>No teste da luz sozinha, a razão de supressão foi diferente no rato com tom pré-treinado e no rato treinado só com o composto? O que isso diz sobre contiguidade?</li>
+      </ul>
+    </section>
+  </div>
+  <footer class="foot">Laboratório Operante · simulação de condicionamento operante e pavloviano · Autora: Alana Campos de Sá · 2026 · Domínio público (The Unlicense): use, copie e modifique sem restrições</footer>
+</div>
+
+<script id="model">
+/* ===== Modelo (sem DOM) ===== */
+const LabModel = (() => {
+'use strict';
+const CLASSES = ['explore','sniff','groom','scratch','lick','rear','drink','nearLever','rearLever','press'];
+const GEO = { W:100, H:64, wall:8, lever:{x:28,y:13}, hopper:{x:54,y:13}, water:{x:68,y:13} };
+/* 9 setores de piso (3×3) e 10 de parede, como no programa de 1994 */
+const floorOf = (x,y) => Math.min(2,Math.max(0,Math.floor(x/33.34)))+3*Math.min(2,Math.max(0,Math.floor((y-8)/18.67)));
+const wallOf = (x,y) => { const c=Math.min(2,Math.floor(x/33.34)); return y<16?c:y>56?3+c:x<10?6+(y>37?1:0):x>90?8+(y>37?1:0):-1; };
+const wallPoint = j => j<3?[16.7+33.3*j,12]:j<6?[16.7+33.3*(j-3),60]:j<8?[5,24+26*(j-6)]:[95,24+26*(j-8)];
+const P = { alpha:0.12, beta:0.045, G:30, tauTr:1.5, tauA:60, gainA:0.3, tauF:50, alphaV:0.18,
+            speed:30, csDur:20, aTone:0.35, aLight:0.15, iti:90 };
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function lowerBound(arr,v){let lo=0,hi=arr.length;while(lo<hi){const m=(lo+hi)>>1;if(arr[m]<v)lo=m+1;else hi=m}return lo}
+
+class Lab {
+  constructor(seed){ this.rand = mulberry32((seed>>>0)||1); this.insatiable=false; this.varDist='exp'; this.reset(); }
+  reset(){
+    this.t=0; this.session=1; this.sessionStart=0; this.nextCheck=1;
+    this.E={}; this.I={}; this.tr={};
+    for(const c of CLASSES){ this.E[c]=0; this.I[c]=0; this.tr[c]=0; }
+    this.V=0; this.Hs=0; this.A=0; this.F=0; this.hunger=1; this.kappa=0;
+    this.Ss=new Array(19).fill(0); this.trs=new Array(19).fill(0); this.hist=[]; this.madN=0;
+    this.Nhat=1; this.That=null; this.mad=0; this.reg={mp:0,mi:0,vp:0,cv:0}; this.slope=0;
+    this.sched={type:'CRF',n:1}; this.req=1; this.cnt=0; this.armAt=0; this.run=0;
+    this.lastSR=-1e9; this.lastSchedSR=null; this.lastPress=-1e9; this.pause=null; this.bp=0;
+    this.pellets=[]; this.presses=[]; this.reinf=[]; this.marks=[{t:0,label:'CRF'}];
+    this.Vcs={tone:0,light:0}; this.ext={tone:0,light:0}; this.cs=null; this.queue=[]; this.nextTrialAt=0;
+    this.trials=[]; this.csSpans=[]; this.shockLevel=1;
+    this.events=[]; this.stats={sessPresses:0,sessReinf:0,schedReinf:0,eaten:0};
+    this.extinction=null; this.budget={};
+    this.rat={x:70,y:40,hd:Math.PI,act:null,pressAnim:0,shockAnim:0};
+    this.setAct('explore');
+  }
+  gauss(){ let u=0; while(u===0)u=this.rand(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*this.rand()); }
+  S(c){ return Math.max(0,this.E[c]-this.I[c]); }
+  mot(){ return clamp(this.hunger/0.6,0,1); }
+  pred(){ return this.That==null?0:clamp(1-this.mad/0.45,0,1); }
+  theta(){ return this.pred()*(0.62-0.27*this.slope); }
+  irtMean(){ return (0.28+1.4*(1-this.A)*(1-this.A))*Math.exp(this.kappa)/(1+0.5*this.F); }
+  sampleIRT(){ return Math.max(0.15,this.irtMean()*Math.exp(0.35*this.gauss()-0.06)); }
+  count(t0,t1){ return lowerBound(this.presses,t1)-lowerBound(this.presses,t0); }
+  rate(sec){ const span=Math.min(sec,this.t-this.sessionStart); return span<5?0:this.count(this.t-span,this.t+1e-9)/(span/60); }
+  schedLabel(){ const s=this.sched; return s.type==='EXT'||s.type==='CRF'?s.type:s.type+' '+s.n+(s.type[1]==='I'?' s':''); }
+  atLever(){ return dist(this.rat,GEO.lever)<9; }
+
+  setSchedule(type,n){
+    const prev=this.schedLabel(), base=this.rate(300);
+    this.sched={type,n:Math.max(1,+n||1)}; this.run=0; this.newReq();
+    this.marks.push({t:this.t,label:this.schedLabel()});
+    this.extinction = type==='EXT' ? {t0:this.t,from:prev,base,i0:this.presses.length,done:false,checked:false} : null;
+  }
+  newReq(){
+    const s=this.sched; this.cnt=0; this.req=1;
+    if(s.type==='FR') this.req=s.n;
+    else if(s.type==='VR') this.req = s.n<=1?1:this.varDist==='uni'?1+Math.floor(this.rand()*(2*s.n-1)):1+Math.floor(Math.log(1-this.rand())/Math.log(1-1/s.n));
+    else if(s.type==='FI') this.armAt=this.t+s.n;
+    else if(s.type==='VI') this.armAt=this.t+(this.varDist==='uni'?1+this.rand()*(2*s.n-2):Math.min(4*s.n,-s.n*Math.log(1-this.rand())));
+  }
+  press(){
+    const t=this.t, s=this.sched;
+    this.presses.push(t); this.stats.sessPresses++; this.tr.press=1; this.rat.pressAnim=0.18;
+    const irt=this.inRun?t-this.lastPress:null;
+    if(this.pause==null&&this.lastSchedSR!=null) this.pause=t-this.lastSchedSR;
+    this.lastPress=t; this.run++; this.cnt++;
+    let hit=false;
+    if(s.type==='CRF') hit=true;
+    else if(s.type==='FR'||s.type==='VR') hit=this.cnt>=this.req;
+    else if(s.type==='FI'||s.type==='VI') hit=t>=this.armAt;
+    this.events.push({type:'press',hit});
+    if(hit) this.deliver(true,irt);
+    else {
+      this.I.press+=P.beta*this.S('press')/Math.max(1,this.Nhat);
+      this.Ss[floorOf(this.rat.x,this.rat.y)]*=1-P.beta/Math.max(1,this.Nhat);
+      if(this.run>3*this.Nhat+2) this.F+=0.08*(1-this.F);
+    }
+  }
+  reinforce(d){
+    if(d<=0.001) return;
+    for(const c of CLASSES){ const g=d*this.tr[c]; if(g<=0) continue;
+      this.E[c]+=P.alpha*g*(1-this.E[c]); this.I[c]*=1-0.3*g; }
+    for(let i=0;i<19;i++){ const g=d*this.trs[i]; if(g>0.001) this.Ss[i]+=P.alpha*g*(1-this.Ss[i]); }
+  }
+  closeR(){ return 16+60*this.V*this.V; }
+  theory(){
+    if(this.Nhat<1.3) return 'CRF';
+    if(this.That==null||this.hist.length<3) return 'ainda sem dados';
+    if(this.madN<0.2) return 'razão fixa ≈ '+Math.round(this.Nhat);
+    if(this.pred()>0.6) return 'intervalo fixo ≈ '+Math.round(this.That)+' s';
+    return 'variável, ≈ '+Math.round(this.Nhat)+' resp. ou '+Math.round(this.That)+' s';
+  }
+  serialize(){ const o={}; for(const k of Object.keys(this)) if(k!=='rand'&&k!=='events') o[k]=this[k]; return JSON.parse(JSON.stringify(o)); }
+  load(o){ Object.assign(this,JSON.parse(JSON.stringify(o))); this.events=[]; }
+  deliver(sched,irt){
+    const t=this.t;
+    this.pellets.push({t,V:this.V}); this.reinf.push(t); this.stats.sessReinf++;
+    this.events.push({type:'click',sched:!!sched});
+    this.reinforce(this.V);                       // reforço condicionado, no instante do clique
+    if(sched){
+      this.stats.schedReinf++;
+      this.hist.push({n:this.run,iri:this.lastSchedSR==null?null:Math.round((t-this.lastSchedSR)*10)/10}); if(this.hist.length>10) this.hist.shift();
+      this.madN+=0.2*(Math.abs(this.run-this.Nhat)/Math.max(1,this.Nhat)-this.madN);
+      this.Nhat+=0.25*(this.run-this.Nhat);
+      if(this.lastSchedSR!=null){
+        const iri=t-this.lastSchedSR;
+        if(this.That==null){ this.That=iri; this.mad=0.3; }
+        else { this.mad+=0.2*(Math.abs(iri-this.That)/this.That-this.mad); this.That+=0.2*(iri-this.That); }
+        if(this.pause!=null){
+          const g=this.reg, r=0.15, dp=this.pause-g.mp, di=iri-g.mi;
+          g.mp+=r*dp; g.mi+=r*di; g.vp=(1-r)*(g.vp+r*dp*dp); g.cv=(1-r)*(g.cv+r*dp*di);
+          this.slope=clamp(g.cv/(g.vp+Math.pow(0.04*this.That,2)+0.02),0,1);
+        }
+      }
+      if(irt!=null){ const lr=clamp(Math.log(irt/this.irtMean()),-1,1); this.kappa+=0.2*lr-0.05*this.kappa; }
+      this.lastSchedSR=t; this.pause=null; this.run=0; this.newReq();
+      this.bp = this.That==null?0:this.theta()*Math.max(0,this.That-3)*Math.max(0.15,1+0.3*this.gauss());
+    }
+    this.lastSR=t;
+    const r=this.rat, d=dist(r,GEO.hopper);
+    const p=d<this.closeR()?0.88+0.12*this.V:0.04;   // dentro do círculo de "perto o bastante"
+    if(r.act.cls!=='eat'&&r.act.cls!=='startle'&&this.rand()<p) this.setAct('toHopper');
+  }
+  startEat(){
+    const t=this.t, n=this.pellets.length;
+    for(const p of this.pellets){
+      this.reinforce(1-p.V);                      // reforço primário: o que o clique não previu
+      const cg=Math.exp(-(t-p.t)/4);
+      this.V=clamp(this.V+P.alphaV*(1-this.V)*cg-0.05*this.V*(1-cg),0,1);
+      if(!this.insatiable) this.hunger=Math.max(0,this.hunger-0.003); this.A+=P.gainA*(1-this.A); this.stats.eaten++;
+    }
+    if(this.rat.act.cls==='check') this.Hs+=0.3*(1-this.Hs);
+    this.pellets=[]; this.setAct('eat'); this.events.push({type:'eat',n});
+  }
+  setAct(cls){
+    const R=()=>this.rand(), r=this.rat, L=GEO.lever, H=GEO.hopper;
+    let tx=r.x, ty=r.y, d=1; this.inRun=false;
+    switch(cls){
+      case 'explore': {
+        const m=6*this.mot(); let k=-1, tot=1.5; for(let i=0;i<9;i++) tot+=m*this.Ss[i];
+        let u=R()*tot-1.5; if(u>0) for(let i=0;i<9;i++){ u-=m*this.Ss[i]; if(u<=0){ k=i; break; } }
+        if(k<0){ tx=8+R()*84; ty=14+R()*44; }
+        else { tx=clamp((k%3+R())*33.34,8,92); ty=clamp(8+(Math.floor(k/3)+R())*18.67,14,58); this.Ss[k]*=0.97; }
+        d=0.3+R()*0.7; break; }
+      case 'sniff': d=0.8+R()*1.2; break;
+      case 'scratch': d=1+R()*1.5; break;
+      case 'lick': d=2+R()*2; break;
+      case 'drink': tx=GEO.water.x; ty=GEO.water.y; d=2+R()*2; break;
+      case 'groom': d=2+R()*3; break;
+      case 'rear': {
+        const m=8*this.mot(); let tot=1; for(let j=0;j<10;j++) tot+=m*this.Ss[9+j];
+        let u=R()*tot-1; if(u>0) for(let j=0;j<10;j++){ u-=m*this.Ss[9+j]; if(u<=0){ const w=wallPoint(j); tx=w[0]; ty=w[1]; this.Ss[9+j]*=0.97; break; } }
+        d=1+R(); if(Math.hypot(tx-L.x,ty-L.y)<9){ cls='rearLever'; d=1.2; }   // erguer-se junto à barra é a mesma resposta
+        break; }
+      case 'freeze': d=1+R()*1.5; break;
+      case 'startle': d=3; break;
+      case 'nearLever': tx=L.x-4+R()*8; ty=L.y+R()*4; d=1.5+R()*1.5; break;
+      case 'rearLever': tx=L.x-2+R()*4; ty=L.y; d=1.2; break;
+      case 'press': tx=L.x; ty=L.y; d=this.sampleIRT(); break;
+      case 'check': case 'toHopper': tx=H.x; ty=H.y; d=0.8; break;
+      case 'eat': tx=H.x; ty=H.y; d=1.2; break;
+    }
+    if(cls!=='press'&&this.E[cls]!==undefined){ this.I[cls]+=0.04*this.S(cls); this.Ss[floorOf(r.x,r.y)]*=0.985; }
+    const far=Math.hypot(tx-r.x,ty-r.y)>0.5;
+    r.act={cls,tx,ty,d,phase:far?'move':'do',el:0,pressAt:(cls==='rearLever'&&R()<0.15)?0.25+0.3*R():-1};
+    if(!far&&cls!=='press'&&this.tr[cls]!==undefined) this.tr[cls]=1;
+  }
+  endAct(){
+    const a=this.rat.act, prev=a.cls;
+    if(prev==='press') this.press();
+    else if(prev==='check'&&!this.pellets.length) this.Hs*=0.6;
+    if(this.rat.act!==a) return;
+    this.choose(prev);
+  }
+  choose(prev){
+    if(this.cs&&this.rand()<0.95*this.fearNow()) return this.setAct('freeze');
+    const m=this.mot(), G=P.G*m, F=this.F, atL=this.atLever();
+    const gate=(this.t-this.lastSR<this.bp)?0.02:1;
+    const sp=this.S('press'), sub=(1-sp)*(1-sp);   // a topografia reforçada substitui as aproximações
+    const w=[
+      ['explore',(1.0+G*this.S('explore')*sub)*(1+F)],
+      ['sniff',(0.5+G*this.S('sniff')*sub)*(1+F)],
+      ['groom',0.3+G*this.S('groom')*sub],
+      ['scratch',0.15+G*this.S('scratch')*sub],
+      ['lick',0.15+G*this.S('lick')*sub],
+      ['drink',0.08+G*this.S('drink')*sub],
+      ['rear',(0.35+G*this.S('rear')*sub)*(1+2*F)],
+      ['nearLever',0.07+G*this.S('nearLever')*sub*gate],
+      ['rearLever',(atL?0.05:0.005)+G*(this.S('rearLever')+0.12*this.S('nearLever')+(atL?0.15*this.S('rear'):0))*sub*gate],
+      ['press',((atL?0.002:0.0005)+G*Math.pow(sp,1.5))*gate*(prev==='press'?2.5:1)],
+      ['check',0.05+0.25*this.V*m+6*this.Hs*m+(this.pellets.length?0.8:0)]
+    ];
+    let tot=0; for(const x of w) tot+=x[1];
+    let u=this.rand()*tot;
+    for(const x of w){ u-=x[1]; if(u<=0){ this.setAct(x[0]); this.inRun=(x[0]==='press'&&prev==='press'); return; } }
+    this.setAct('explore');
+  }
+  step(dt){
+    this.t+=dt; const t=this.t, r=this.rat;
+    const kd=Math.exp(-dt/P.tauTr); for(const c of CLASSES) this.tr[c]*=kd;
+    for(let i=0;i<19;i++) this.trs[i]*=kd;
+    this.A*=Math.exp(-dt/P.tauA); this.F*=Math.exp(-dt/P.tauF);
+    if(r.pressAnim>0) r.pressAnim-=dt; if(r.shockAnim>0) r.shockAnim-=dt;
+    this.stepCS();
+    const a=r.act;
+    if(a.phase==='move'){
+      const dx=a.tx-r.x, dy=a.ty-r.y, D=Math.hypot(dx,dy), st=P.speed*dt*(a.cls==='toHopper'?1.25:1);
+      if(D<=st){ r.x=a.tx; r.y=a.ty; a.phase='do'; if(a.cls!=='press'&&this.tr[a.cls]!==undefined) this.tr[a.cls]=1; }
+      else { r.x+=dx/D*st; r.y+=dy/D*st; r.hd=Math.atan2(dy,dx); }
+      if(a.cls==='explore') this.tr.explore=1;
+    } else {
+      if(a.cls!=='press'&&this.tr[a.cls]!==undefined) this.tr[a.cls]=1;
+      if(a.cls==='press'||a.cls==='rearLever'||a.cls==='eat'||a.cls==='check'||a.cls==='nearLever'||a.cls==='drink') r.hd=-Math.PI/2;
+      a.d-=dt; a.el+=dt;
+      if(a.pressAt>0&&a.el>=a.pressAt){ a.pressAt=-1; this.press(); }   // as patas caem sobre a barra
+      if(r.act===a&&a.d<=0) this.endAct();
+    }
+    if(dist(r,GEO.lever)<9) this.tr.nearLever=1;
+    this.trs[floorOf(r.x,r.y)]=1;
+    if(r.act.phase==='do'&&(r.act.cls==='rear'||r.act.cls==='rearLever')){ const w=wallOf(r.x,r.y); if(w>=0) this.trs[9+w]=1; }
+    const c=r.act.cls;
+    if(this.pellets.length&&c!=='eat'&&c!=='startle'&&dist(r,GEO.hopper)<6) this.startEat();
+    this.budget[r.act.cls]=(this.budget[r.act.cls]||0)+dt;
+    if(t>=this.nextCheck){ this.nextCheck=t+1; this.checks(); }
+  }
+  checks(){
+    const x=this.extinction, t=this.t;
+    if(!x||x.done) return;
+    const el=t-x.t0;
+    if(!x.checked&&el>=120){
+      x.checked=true; const r2=(this.presses.length-x.i0)/2;
+      if(x.base>4&&r2>1.15*x.base) this.events.push({type:'extBurst',rate:r2,base:x.base});
+    }
+    if(el>=300&&this.count(t-180,t)<2){
+      x.done=true; x.n=lowerBound(this.presses,t-180)-x.i0; x.dur=el-180;
+      this.events.push({type:'extDone',n:x.n,from:x.from,dur:x.dur,recovery:!!x.recovery});
+    }
+  }
+  /* ----- pavloviano: supressão condicionada, Rescorla–Wagner ----- */
+  fearNow(){ const c=this.cs; if(!c) return 0; return clamp((c.tone?this.Vcs.tone:0)+(c.light?this.Vcs.light:0),0,1); }
+  queueTrials(tone,light,us,n){
+    const empty=!this.queue.length&&!this.cs;
+    for(let i=0;i<n;i++) this.queue.push({tone,light,us});
+    if(empty) this.nextTrialAt=Math.max(this.nextTrialAt,this.t+30+30*this.rand());
+  }
+  stepCS(){
+    const t=this.t;
+    if(this.cs){ if(t>=this.cs.t1) this.endTrial(); }
+    else if(this.queue.length&&t>=this.nextTrialAt){
+      const q=this.queue.shift();
+      this.cs={tone:q.tone,light:q.light,us:q.us,t0:t,t1:t+P.csDur,i0:this.presses.length,pre:this.count(t-P.csDur,t)};
+      this.events.push({type:'csOn'});
+    }
+  }
+  endTrial(){
+    const c=this.cs, B=this.presses.length-c.i0, Apre=c.pre;
+    const ratio=(Apre+B)>=4?B/(Apre+B):null;
+    const sum=(c.tone?this.Vcs.tone:0)+(c.light?this.Vcs.light:0);
+    const lam=c.us?this.shockLevel:0, b=c.us?1:0.5;
+    for(const k of ['tone','light']) if(c[k]){
+      const d=(k==='tone'?P.aTone:P.aLight)*b*(lam-sum);
+      this.Vcs[k]+=d;
+      if(!c.us&&d<0) this.ext[k]-=d; else if(c.us&&d>0) this.ext[k]=Math.max(0,this.ext[k]-d);
+    }
+    if(c.us){ this.rat.shockAnim=0.5; this.setAct('startle'); this.events.push({type:'shock'}); }
+    const tr={n:this.trials.length+1,tone:c.tone,light:c.light,us:c.us,ratio,A:Apre,B,Vt:this.Vcs.tone,Vl:this.Vcs.light,t:c.t0};
+    this.trials.push(tr); this.csSpans.push({t0:c.t0,t1:this.t,tone:c.tone,light:c.light,us:c.us});
+    this.events.push({type:'trial',trial:tr});
+    this.cs=null; this.nextTrialAt=this.t+P.iti*(0.6+0.8*this.rand());
+  }
+  newSession(){
+    this.session++; this.sessionStart=this.t;
+    for(const c of CLASSES){ this.I[c]*=0.5; this.tr[c]=0; }
+    for(const k of ['tone','light']){ this.Vcs[k]+=0.3*this.ext[k]; this.ext[k]*=0.7; }
+    this.hunger=1; this.A=0; this.F=0; this.pellets=[]; this.cs=null; this.queue=[];
+    this.lastSR=-1e9; this.lastSchedSR=null; this.pause=null; this.bp=0; this.run=0; this.newReq();
+    this.stats.sessPresses=0; this.stats.sessReinf=0; this.budget={};
+    this.marks.push({t:this.t,label:'Sessão '+this.session+' · '+this.schedLabel()});
+    if(this.sched.type==='EXT') this.extinction={t0:this.t,from:'EXT',base:0,i0:this.presses.length,done:false,checked:true,recovery:true};
+    this.rat.x=70; this.rat.y=40; this.setAct('explore');
+  }
+  pretrain(){
+    this.V=1; this.E.press=Math.max(this.E.press,0.92); this.I.press=0; this.E.nearLever=Math.max(this.E.nearLever,0.5);
+    this.A=Math.max(this.A,0.4); this.marks.push({t:this.t,label:'pré-treinado'});
+  }
+}
+return { Lab, GEO, P, CLASSES, lowerBound, wallPoint };
+})();
+if (typeof module!=='undefined') module.exports=LabModel;
+</script>
+
+<script>
+/* ===== Interface ===== */
+(() => {
+'use strict';
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const { Lab, GEO, P, lowerBound, wallPoint } = LabModel;
+const lab = new Lab((Math.random()*4294967296)>>>0);
+const DT = 0.05;
+let speed = 1, paused = false, acc = 0, last = performance.now();
+const fmt = s => { s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60); return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); };
+const num = (v,d=2) => v.toFixed(d).replace('.',',');
+
+/* ---------- explicações ---------- */
+const EX = {
+  base:{e:'Etapa 1', t:'Linha de base',
+    b:'Antes de qualquer treino, observe o que o rato faz por conta própria durante dois minutos. Ele explora, fareja, ergue-se nas patas traseiras e limpa-se. Uma vez ou outra pode até tocar a barra. A frequência de uma resposta antes do reforço é o seu nível operante, e é contra ele que se mede o efeito do treino.',
+    o:'Abra a aba Etograma e anote a proporção de tempo em cada categoria e o número de pressões espontâneas. Esse é o seu ponto de comparação.',
+    m:'Descreva o que o rato faz, não o que ele “quer” ou “pensa”. “Ergueu-se junto à parede” é um dado; “ficou curioso com a barra” é uma inferência que o registro não sustenta.',
+    q:'Cada comportamento é sorteado com probabilidade proporcional ao seu peso: peso = nível de base + 30 · motivação · força aprendida. Sem treino, só o nível de base conta.'},
+  mag:{e:'Etapa 2', t:'Treino ao comedouro',
+    b:'O rato ainda não sabe que o clique do alimentador anuncia comida. Libere pelotas quando ele estiver perto do comedouro. A cada vez que o clique é seguido de comida em poucos segundos, o clique ganha valor e passa a funcionar como reforçador condicionado.',
+    o:'No começo o rato só acha a pelota por acaso. Depois de 15 a 20 pareamentos ele larga o que estiver fazendo e vai ao comedouro assim que ouve o clique.',
+    m:'Pular esta etapa não é atalho. Sem o clique, a comida chega segundos depois da resposta, e o reforço atrasado fortalece o que o animal fazia por último, não o que você queria.',
+    q:'ΔV = 0,18 · (1 − V) · c − 0,05 · V · (1 − c), com c = e^(−atraso / 4 s). O rato atende ao clique dentro de um raio de 16 + 60 · V² em torno do comedouro (veja no Mapa de aprendizagem). O erro de predição passa da comida para o clique, como a resposta fásica de dopamina descrita por Schultz (1997).'},
+  shape:{e:'Etapa 3', t:'Modelagem por aproximações sucessivas',
+    b:'Agora o clique reforça na hora. Reforce primeiro o rato estar perto da barra (ou, como no roteiro clássico, erguer-se em qualquer lugar e depois cada vez mais perto dela). Quando isso ficar frequente, pare de reforçar e espere ele se erguer junto à barra. Ao se erguer ali, as patas acabam caindo na barra, e a própria câmara reforça a pressão (o esquema é CRF).',
+    o:'Cada vez que você sobe o critério, o comportamento anterior entra em extinção e fica mais variável. É dessa variação que sai a próxima aproximação.',
+    m:'Modelagem não é mostrar ao animal o que fazer. É reforço diferencial de variações que ele já emite. O erro mais comum é reforçar tarde: meio segundo depois o rato já está fazendo outra coisa.',
+    q:'Crédito de cada comportamento = e^(−tempo desde a emissão / 1,5 s). ΔE = 0,12 · δ · crédito · (1 − E).'},
+  crf:{e:'Etapa 4', t:'Reforço contínuo (CRF)',
+    b:'Cada pressão produz uma pelota. A aquisição é rápida, mas a taxa fica moderada, porque o rato gasta quase todo o tempo indo ao comedouro e comendo.',
+    o:'No registro, uma reta de inclinação constante com uma marca de reforço em cada passo.',
+    m:'CRF é o melhor esquema para instalar a resposta e o pior para mantê-la: é o que menos resiste à extinção.',
+    q:'Com N̂ = 1 resposta esperada por reforço, cada pressão não reforçada gera a inibição máxima.'},
+  sched:{e:'Etapa 5', t:'Esquemas intermitentes',
+    b:'Agora nem toda pressão é reforçada. Esquemas de razão dependem do número de respostas; esquemas de intervalo dependem do tempo desde o último reforço, mais uma resposta. Cada um produz um padrão próprio no registro cumulativo.',
+    o:'Passe por FR, VR, FI e VI por alguns minutos cada (16× ajuda) e compare inclinações e pausas.',
+    m:'Aumente a exigência aos poucos: CRF, FR 3, FR 6, FR 12. Um salto direto para FR 50 extingue a resposta antes do primeiro reforço.',
+    q:'Inibição por pressão não reforçada = 0,045 · força / N̂. O rato tolera a falta de reforço na medida do que já aprendeu a esperar.'},
+  FR:{e:'Esquema de razão', t:'Razão fixa (FR)',
+    b:'A enésima resposta desde o último reforço é reforçada. O padrão típico é pausa após o reforço seguida de uma corrida em taxa alta até o próximo.',
+    o:'Degraus no registro: trecho plano (pausa) e subida íngreme. A pausa cresce quando você aumenta a razão.',
+    m:'A pausa não é cansaço nem saciação. Em esquemas múltiplos ela depende da razão que vem a seguir, não da que acabou de ser cumprida.',
+    q:'Pausa ≈ θ · T̂, com T̂ = intervalo esperado entre reforços. θ diminui quando o rato detecta que pausar atrasa o reforço, o que acontece em razão e não em intervalo.'},
+  VR:{e:'Esquema de razão', t:'Razão variável (VR)',
+    b:'Cada resposta tem a mesma probabilidade, 1/n, de ser reforçada (a rigor, uma razão randômica). O número de respostas por reforço varia em torno de n.',
+    o:'Taxa alta e constante, quase sem pausa após o reforço, porque a próxima pelota pode vir logo na primeira pressão.',
+    m:'A taxa alta não vem da “imprevisibilidade” em si. Em razão, responder mais rápido traz mais reforços por minuto; em intervalo, não.',
+    q:'Ativação A sobe 0,3 · (1 − A) por pelota e cai com constante de 60 s. O intervalo entre respostas encurta com A, fechando um ciclo positivo.'},
+  FI:{e:'Esquema de intervalo', t:'Intervalo fixo (FI)',
+    b:'É reforçada a primeira resposta emitida depois de t segundos desde o último reforço. Pressões antes disso não adiantam nem atrasam nada.',
+    o:'Pausa após o reforço e retomada antes do fim do intervalo. Na média de muitos intervalos aparece o festão (scallop), uma aceleração gradual.',
+    m:'Em intervalos individuais o mais comum é pausa e passagem brusca para taxa alta (break-and-run; Schneider, 1969). A curva suave é em boa parte efeito da média, porque o ponto de retomada varia de um intervalo a outro em proporção a t.',
+    q:'Ponto de retomada = θ · T̂ · (1 + 0,3 · ruído). Variabilidade proporcional ao intervalo: a propriedade escalar da estimação de tempo.'},
+  VI:{e:'Esquema de intervalo', t:'Intervalo variável (VI)',
+    b:'É reforçada a primeira resposta depois de um intervalo que varia em torno de t. O rato não tem como prever quando o reforço fica disponível.',
+    o:'Reta de inclinação moderada e muito regular, sem pausas. Por isso VI é a linha de base preferida para medir outros efeitos, como a supressão condicionada.',
+    m:'A taxa fica abaixo da de VR mesmo com a mesma taxa de reforço. Em VI, quanto mais o rato espera entre duas pressões, maior a chance de a próxima ser reforçada, então intervalos longos entre respostas são reforçados diferencialmente.',
+    q:'κ ← κ + 0,2 · ln(IRT reforçado / IRT médio) − 0,05 · κ. Em VI os IRTs reforçados são mais longos que a média e o ritmo desacelera.'},
+  EXT:{e:'Etapa 6', t:'Extinção',
+    b:'A pressão deixa de produzir comida e clique. A resposta declina aos poucos. Às vezes, antes de cair, a taxa e a variabilidade sobem por um momento (jorro de extinção).',
+    o:'A curva vai deitando até ficar plana. Repita depois de CRF e depois de VR 20 e compare no Diário quantas respostas o rato emite até parar.',
+    m:'O jorro não é regra: apareceu em 24% dos 113 casos aplicados revistos por Lerman e Iwata (1995). E extinção não apaga o aprendizado. É aprendizagem nova, inibitória e dependente do contexto (Bouton, 2004).',
+    q:'Força líquida = E − I. Na extinção só I cresce: ΔI = 0,045 · (E − I) / N̂. Treino intermitente deixa N̂ alto e a extinção lenta: o efeito do reforço parcial.'},
+  rec:{e:'Etapa 7', t:'Recuperação espontânea',
+    b:'Depois de extinguir a resposta, inicie uma nova sessão mantendo a extinção. Sem nenhum reforço novo, o rato volta a pressionar, menos que antes, e para mais rápido.',
+    o:'Um pequeno surto de pressões no início da sessão e nova queda. Se você religar o reforço, a resposta volta em poucas pelotas (reaquisição rápida).',
+    m:'Se a extinção fosse esquecimento, o descanso não traria a resposta de volta. A recuperação mostra que o aprendizado original continua lá.',
+    q:'Entre sessões, I ← 0,5 · I e E fica intacta.'},
+  cer:{e:'Etapa 8', t:'Supressão condicionada',
+    b:'Com o rato pressionando de forma estável em VI, um tom de 20 s termina em um choque breve nas patas, faça o rato o que fizer. Em poucos pareamentos o tom passa a eliciar congelamento, que compete com pressionar (Estes e Skinner, 1941).',
+    o:'Durante o tom a pena do registro fica plana. Mede-se com a razão de supressão B / (A + B): B são as pressões durante o tom e A as pressões nos 20 s anteriores. 0,5 indica nenhum medo; 0 indica supressão total.',
+    m:'O choque aqui não é punição, porque não depende da resposta. O que se mede é um efeito pavloviano sobre uma linha de base operante.',
+    q:'ΔV = α · β · (λ − ΣV), com α = 0,35 para o tom e 0,15 para a luz; β = 1 com choque e 0,5 sem.'},
+  block:{e:'Etapa 9', t:'Bloqueio e sombreamento',
+    b:'Depois de o tom já predizer o choque, apresente tom e luz juntos seguidos de choque e teste a luz sozinha: ela quase não suprime. O choque já era esperado, e sem surpresa não há aprendizagem (bloqueio; Kamin, 1969). Em um rato novo, treine o composto desde o início: a luz condiciona, mas menos que o tom, que é mais saliente (sombreamento).',
+    o:'Compare a barra do teste “luz sozinha” nos dois casos e os valores de medo no painel Variáveis.',
+    m:'O bloqueio mostrou que contiguidade entre estímulo e choque não basta. A luz foi pareada com o choque várias vezes e mesmo assim não condicionou.',
+    q:'Com V do tom ≈ λ, o termo (λ − ΣV) ≈ 0 e ΔV da luz ≈ 0. O mesmo modelo prevê, erradamente, que um inibidor apresentado sozinho perde a inibição (Zimmer-Hart e Rescorla, 1974).'},
+  loc:{e:'Ferramenta', t:'Mapa de aprendizagem',
+    b:'A câmara está dividida em 9 setores de piso e 10 de parede. Todo reforço fortalece o que o rato fazia e também o lugar onde estava. Um setor fortalecido vira atrator: o rato passa a explorar ali e a erguer-se naquela parede. Por isso dá para treinar qualquer comportamento do repertório em um ponto escolhido, como coçar-se no canto direito.',
+    o:'Os números são a força de cada setor de piso; os pontos âmbar são os setores de parede. O círculo tracejado é a distância dentro da qual o rato atende ao clique. Ele cresce com o treino ao comedouro até cobrir a câmara.',
+    m:'Aprender o lugar e aprender a resposta são coisas ligadas, mas distintas. Um rato pode ficar junto à barra sem pressioná-la: o setor está forte e a resposta ainda não.',
+    q:'ΔS(setor) = α · δ · crédito do setor · (1 − S). Cada visita sem reforço multiplica S por 0,97.'},
+  obs:{e:'Ferramenta', t:'Treino de observação',
+    b:'Registrar comportamento é uma habilidade. Aqui você codifica o que o rato faz em dez categorias, e o programa confere a cada meio segundo se a sua categoria bate com a dele. O resultado sai em porcentagem de concordância e em kappa de Cohen, que desconta os acertos esperados por acaso.',
+    o:'As categorias fáceis de confundir são lavar o rosto, coçar-se e lamber-se. Repare na postura: patas no focinho, pata traseira em movimento rápido, corpo dobrado para trás.',
+    m:'Concordância alta não garante registro válido: dois observadores podem errar juntos. E a porcentagem bruta engana quando um comportamento domina a sessão, por isso se usa o kappa.',
+    q:'κ = (p₀ − pₑ) / (1 − pₑ), com p₀ = proporção de intervalos em acordo e pₑ = acordo esperado pelas frequências marginais. Tolerância de 0,5 s para o seu tempo de reação.'},
+  strain:{e:'Observação', t:'Distensão da razão',
+    b:'A exigência subiu rápido demais. O rato emitiu muito mais respostas sem reforço do que tinha aprendido a esperar, e a resposta está extinguindo antes de alcançar a pelota.',
+    o:'Pausas longas e irregulares, corridas curtas, e a taxa caindo de reforço em reforço.',
+    m:'Não é preguiça nem saciação: a contingência de reforço continua em vigor, mas o comportamento não a alcança. Volte a uma razão menor e suba em passos pequenos.',
+    q:'N̂ só se atualiza quando um reforço é obtido: N̂ ← N̂ + 0,25 · (respostas no ciclo − N̂).'},
+  sat:{e:'Observação', t:'Saciação',
+    b:'O rato já comeu bastante nesta sessão. A comida perdeu parte do valor reforçador e a taxa está caindo, embora a contingência esteja intacta.',
+    o:'A curva deita aos poucos, como na extinção, mas os reforços continuam sendo entregues.',
+    m:'Privação e saciação são operações motivadoras: alteram o valor do reforçador e a frequência do comportamento que o produz, sem mudar o que o animal aprendeu. Inicie uma nova sessão para restaurar a privação.',
+    q:'Motivação = privação / 0,6, limitada a 1. Cada pelota de 45 mg reduz a privação em 0,003.'}
+};
+let curEx = null;
+function showEx(k){
+  if(curEx===k) return; curEx=k; const x=EX[k];
+  $('#explain').innerHTML = `<span class="eyebrow">${x.e}</span><h3>${x.t}</h3><p>${x.b}</p>
+   <dl><div><dt>O que observar</dt><dd>${x.o}</dd></div><div><dt>Cuidado</dt><dd>${x.m}</dd></div>
+   <div><dt>No modelo</dt><dd class="eq">${x.q}</dd></div></dl>`;
+  renderSteps();
+}
+
+/* ---------- roteiro ---------- */
+const flags = { firstHit:false, interSR:0, extDone:false, recPress:false, cer:false, block:false, compound:0, strain:false, sat:false, v50:false };
+const STEPS = [
+  {k:'base', t:'Linha de base', h:'Observe o rato por 2 minutos sem reforçar e consulte o Etograma.', done:()=>lab.t>=120},
+  {k:'mag', t:'Treino ao comedouro', h:'Libere pelotas com o rato perto do comedouro até ele atender ao clique.', done:()=>lab.V>=0.85},
+  {k:'shape', t:'Modelagem', h:'Reforce aproximações à barra até sair a primeira pressão.', done:()=>flags.firstHit&&lab.E.press>0.3},
+  {k:'crf', t:'Aquisição em CRF', h:'Deixe o rato trabalhar até a resposta ficar forte.', done:()=>lab.E.press>=0.8},
+  {k:'sched', t:'Esquemas intermitentes', h:'Na aba Esquemas, obtenha 40 reforços em FR, VR, FI ou VI.', done:()=>flags.interSR>=40},
+  {k:'EXT', t:'Extinção', h:'Aplique EXT e acompanhe até 3 minutos quase sem respostas.', done:()=>flags.extDone},
+  {k:'rec', t:'Recuperação espontânea', h:'Ainda em EXT, inicie uma nova sessão e veja a resposta voltar.', done:()=>flags.recPress},
+  {k:'cer', t:'Supressão condicionada', h:'Em VI 30, programe 6 tentativas tom → choque na aba Pavloviano.', done:()=>flags.cer},
+  {k:'block', t:'Bloqueio e sombreamento', h:'Programe tom + luz → choque e depois teste a luz sozinha.', done:()=>flags.block}
+];
+const doneSet = new Set();
+function renderSteps(){
+  const firstOpen = STEPS.find(s=>!doneSet.has(s.k));
+  $('#steps').innerHTML = STEPS.map((s,i)=>{
+    const d=doneSet.has(s.k), c=(s.k===curEx);
+    return `<li class="${d?'done':''} ${c?'cur':''}"><button data-step="${s.k}"><span class="mark">${d?'✓':i+1}</span><span><b>${s.t}</b><small>${s.h}</small></span></button></li>`;
+  }).join('');
+  return firstOpen;
+}
+$('#steps').addEventListener('click',e=>{ const b=e.target.closest('[data-step]'); if(b) showEx(b.dataset.step); });
+function checkSteps(){
+  let changed=false;
+  for(const s of STEPS) if(!doneSet.has(s.k)&&s.done()){
+    doneSet.add(s.k); changed=true; log(`Etapa concluída: ${s.t}.`);
+    const i=STEPS.indexOf(s), nx=STEPS[i+1];
+    if(nx&&!doneSet.has(nx.k)&&curEx===s.k) { curEx=null; showEx(nx.k); }
+  }
+  if(changed) renderSteps();
+}
+
+/* ---------- diário ---------- */
+function log(msg){
+  const li=document.createElement('li');
+  li.innerHTML=`<time>S${lab.session} ${fmt(lab.t-lab.sessionStart)}</time>${msg}`;
+  const ul=$('#log'); ul.prepend(li); while(ul.children.length>60) ul.lastChild.remove();
+}
+
+/* ---------- som ---------- */
+let actx=null, toneNode=null;
+function clickSound(){
+  if(!actx||speed>4) return;
+  const o=actx.createOscillator(), g=actx.createGain(), n=actx.currentTime;
+  o.type='square'; o.frequency.value=1700; g.gain.setValueAtTime(0.06,n); g.gain.exponentialRampToValueAtTime(0.0001,n+0.04);
+  o.connect(g); g.connect(actx.destination); o.start(n); o.stop(n+0.05);
+}
+function syncTone(){
+  const on=!!(actx&&lab.cs&&lab.cs.tone&&speed<=4&&!paused);
+  if(on&&!toneNode){ const o=actx.createOscillator(), g=actx.createGain(); o.frequency.value=2000; g.gain.value=0.025; o.connect(g); g.connect(actx.destination); o.start(); toneNode=o; }
+  else if(!on&&toneNode){ toneNode.stop(); toneNode=null; }
+}
+$('#btnSound').addEventListener('click',e=>{
+  if(actx){ if(toneNode){toneNode.stop();toneNode=null;} actx.close(); actx=null; }
+  else { try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ actx=null; } }
+  e.currentTarget.setAttribute('aria-pressed',String(!!actx));
+});
+
+/* ---------- controles ---------- */
+function deliver(){ lab.deliver(false,null); }
+$('#btnPellet').addEventListener('click',deliver);
+document.addEventListener('keydown',e=>{
+  if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if(obs.on&&/^[0-9]$/.test(e.key)){ pickCat(e.key==='0'?9:+e.key-1); return; }
+  if(e.code==='Space'&&!/^(BUTTON|SUMMARY)$/.test(e.target.tagName)){ e.preventDefault(); deliver(); }
+});
+$('#btnPause').addEventListener('click',e=>{ paused=!paused; e.currentTarget.setAttribute('aria-pressed',String(paused)); e.currentTarget.textContent=paused?'Continuar':'Pausar'; });
+$$('[data-speed]').forEach(b=>b.addEventListener('click',()=>{ if(obs.on) return; speed=+b.dataset.speed; $$('[data-speed]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); }));
+$$('[data-tab]').forEach(b=>b.addEventListener('click',()=>{
+  $$('[data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
+  $$('[data-panel]').forEach(p=>p.hidden=(p.dataset.panel!==b.dataset.tab));
+}));
+let selSched='CRF';
+const SH={EXT:'EXT: nenhuma pressão é reforçada.',CRF:'CRF: cada pressão é reforçada.',
+  FR:'FR n: a enésima pressão é reforçada. Comece baixo (3 a 5) e suba aos poucos.',
+  VR:'VR n: cada pressão tem probabilidade 1/n de ser reforçada.',
+  FI:'FI t: a primeira pressão depois de t segundos do último reforço é reforçada.',
+  VI:'VI t: a primeira pressão depois de um intervalo que varia em torno de t segundos é reforçada.'};
+const DEF={FR:5,VR:10,FI:30,VI:30};
+$$('#schedSeg button').forEach(b=>b.addEventListener('click',()=>{
+  selSched=b.dataset.s; $$('#schedSeg button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  const inp=$('#schedN'), has=!!DEF[selSched];
+  inp.disabled=!has; if(has) inp.value=DEF[selSched];
+  $('#schedNLab').textContent=!has?'Parâmetro':(selSched[1]==='R'?'n (respostas)':'t (segundos)');
+  $('#schedHint').textContent=SH[selSched];
+}));
+$('#btnSched').addEventListener('click',()=>{
+  const n=Math.max(2,Math.min(300,Math.round(+$('#schedN').value||2)));
+  if(DEF[selSched]) $('#schedN').value=n;
+  lab.setSchedule(selSched,n); flags.strain=false;
+  log(`Esquema alterado para <b>${lab.schedLabel()}</b>.`);
+  curEx=null; showEx(selSched==='CRF'?'crf':selSched);
+});
+$('#btnSession').addEventListener('click',()=>{
+  const wasExt=flags.extDone&&lab.sched.type==='EXT';
+  lab.newSession(); flags.sat=false;
+  log(`Nova sessão, 24 h depois. Privação restaurada; metade da inibição se dissipou.`);
+  if(wasExt){ curEx=null; showEx('rec'); }
+});
+$('#btnPretrain').addEventListener('click',()=>{ lab.pretrain(); flags.firstHit=true; log('Rato marcado como pré-treinado: atende ao clique e pressiona a barra.'); });
+$('#btnReset').addEventListener('click',()=>{ $('#resetConfirm').hidden=false; });
+$('#btnResetNo').addEventListener('click',()=>{ $('#resetConfirm').hidden=true; });
+$('#btnResetYes').addEventListener('click',()=>{
+  lab.reset(); doneSet.clear(); for(const k in flags) flags[k]=(typeof flags[k]==='number')?0:false;
+  $('#log').innerHTML=''; $('#resetConfirm').hidden=true; renderTrials(); curEx=null; showEx('base'); log('Novo rato ingênuo na câmara.');
+});
+$('#btnQueue').addEventListener('click',()=>{
+  const v=$('#trialType').value, n=Math.max(1,Math.min(20,Math.round(+$('#trialN').value||1)));
+  lab.shockLevel=+$('#shockLv').value;
+  lab.queueTrials(v.includes('T'),v.includes('L'),v.endsWith('+'),n);
+  log(`Programadas ${n} tentativas: ${$('#trialType').selectedOptions[0].textContent}.`);
+  if(!doneSet.has('cer')){ curEx=null; showEx('cer'); } else if(v.startsWith('TL')||v==='L-'){ curEx=null; showEx('block'); }
+});
+$('#btnClearQ').addEventListener('click',()=>{ lab.queue=[]; });
+
+/* ---------- eventos do modelo ---------- */
+function trialCode(t){ return (t.tone?'T':'')+(t.light?'L':'')+(t.us?'+':'−'); }
+function renderTrials(){
+  const ts=lab.trials.slice(-40);
+  $('#trials').innerHTML=ts.map(t=>`<div class="${t.ratio==null?'na':(t.us?'us':'')}" style="height:${t.ratio==null?4:Math.max(2,t.ratio*160)}px" title="Tentativa ${t.n} (${trialCode(t)}): ${t.ratio==null?'linha de base insuficiente':'razão '+num(t.ratio)}"></div>`).join('');
+  $('#trialLabels').innerHTML=ts.map(t=>`<span>${trialCode(t)}</span>`).join('');
+}
+function drain(){
+  const ev=lab.events; if(!ev.length) return;
+  for(const e of ev){
+    if(e.type==='click') clickSound();
+    else if(e.type==='press'){
+      if(e.hit&&!flags.firstHit){ flags.firstHit=true; log('Primeira pressão à barra reforçada.'); }
+      if(e.hit&&/^(FR|VR|FI|VI)$/.test(lab.sched.type)) flags.interSR++;
+      if(lab.extinction&&lab.extinction.recovery&&!flags.recPress){ flags.recPress=true; log('Recuperação espontânea: o rato voltou a pressionar sem ter recebido reforço.'); }
+    }
+    else if(e.type==='extBurst') log(`Jorro de extinção: ${num(e.rate,0)} resp/min nos 2 primeiros minutos, contra ${num(e.base,0)} na linha de base.`);
+    else if(e.type==='extDone'){ flags.extDone=true; log(`<b>Resistência à extinção</b> após ${e.from}: ${e.n} respostas em ${fmt(e.dur)} até o critério.`); }
+    else if(e.type==='trial'){
+      const t=e.trial; renderTrials();
+      log(`Tentativa ${t.n} (${trialCode(t)}): ${t.ratio==null?'linha de base insuficiente para medir':'razão de supressão '+num(t.ratio)+' ('+t.B+' durante, '+t.A+' antes)'}.`);
+      if(t.ratio!=null&&t.ratio<0.2) flags.cer=true;
+      if(t.tone&&t.light&&t.us) flags.compound++;
+      if(t.light&&!t.tone&&!t.us&&flags.compound>=4){ flags.block=true;
+        log(`Teste da luz: medo do tom ${num(t.Vt)}, medo da luz ${num(t.Vl)}. ${t.Vl<0.12?'A luz ficou bloqueada pelo tom já treinado.':'A luz condicionou, menos que o tom (sombreamento).'}`); }
+    }
+  }
+  ev.length=0;
+}
+function monitors(){
+  if(!flags.v50&&lab.V>=0.5){ flags.v50=true; log('O clique já prediz comida pela metade (V = 0,5).'); }
+  const s=lab.sched;
+  if(!flags.strain&&(s.type==='FR'||s.type==='VR')&&lab.E.press>0.5&&lab.S('press')<0.3*lab.E.press&&lab.Nhat<s.n/2){
+    flags.strain=true; log('Distensão da razão: a exigência subiu mais rápido do que o rato aprendeu a esperar.'); curEx=null; showEx('strain'); }
+  if(!flags.sat&&lab.mot()<0.7){ flags.sat=true; log('Saciação: a comida está perdendo valor nesta sessão.'); curEx=null; showEx('sat'); }
+}
+
+/* ---------- painel de variáveis ---------- */
+const BARS=[
+  ['Clique → comida','reforçador condicionado','food',()=>lab.V],
+  ['Pressionar a barra','força líquida = excitação − inibição','',()=>lab.S('press')],
+  ['Inibição do pressionar','cresce na extinção, cede com o descanso','',()=>lab.I.press],
+  ['Aproximar-se da barra','','',()=>lab.S('nearLever')],
+  ['Erguer-se na barra','','',()=>lab.S('rearLever')],
+  ['Ativação','acompanha a taxa de reforço','',()=>lab.A],
+  ['Frustração','reforço esperado que não veio','',()=>lab.F],
+  ['Motivação','privação de comida','food',()=>lab.mot()],
+  ['Medo do tom','','fear',()=>lab.Vcs.tone],
+  ['Medo da luz','','fear',()=>lab.Vcs.light]
+];
+$('#bars').innerHTML=BARS.map((b,i)=>`<div class="bar ${b[2]}"><div class="lab"><span>${b[0]}</span><em id="bv${i}">0,00</em></div><div class="track"><div class="fill" id="bf${i}"></div></div>${b[1]?`<small>${b[1]}</small>`:''}</div>`).join('');
+const BARS_EL=BARS.map((_,i)=>[$('#bv'+i),$('#bf'+i)]);
+function renderVars(){
+  BARS.forEach((b,i)=>{ const v=b[3](); BARS_EL[i][0].textContent=num(v); BARS_EL[i][1].style.width=Math.max(0,Math.min(1,v))*100+'%'; });
+  $('#kv').innerHTML=`<span>Respostas esperadas por reforço (N̂)</span><span>${num(lab.Nhat,1)}</span>
+   <span>Intervalo esperado entre reforços (T̂)</span><span>${lab.That==null?'—':num(lab.That,1)+' s'}</span>
+   <span>Previsibilidade do reforço</span><span>${num(lab.pred())}</span>
+   <span>Pausa prevista após o reforço</span><span>${lab.That==null?'—':num(lab.theta()*lab.That,1)+' s'}</span>
+   <span>Intervalo médio entre pressões em corrida</span><span>${num(lab.irtMean())} s</span>
+   <span>Esquema que o rato estima</span><span>${lab.theory()}</span>
+   <span>Respostas nos últimos reforços</span><span>${lab.hist.map(h=>h.n).join(' ')||'—'}</span>
+   <span>Intervalos nos últimos reforços (s)</span><span>${lab.hist.map(h=>h.iri==null?'·':Math.round(h.iri)).join(' ')||'—'}</span>`;
+}
+
+/* ---------- etograma ---------- */
+const ETHO=[['explore','Andar e explorar'],['sniff','Farejar parado'],['groom','Lavar o rosto'],['scratch','Coçar-se'],['lick','Lamber-se'],['rear','Erguer-se'],['drink','Beber'],['nearLever','Ficar junto à barra'],['rearLever','Erguer-se junto à barra'],['press','Pressionar a barra (inclui ir até ela)'],['check','Ir ao comedouro'],['eat','Comer'],['freeze','Congelar']];
+function renderEtho(){
+  const b=lab.budget; let tot=0; for(const k in b) tot+=b[k]; tot=tot||1;
+  $('#etho').innerHTML=ETHO.map(([k,n])=>{ const v=((b[k]||0)+(k==='check'?(b.toHopper||0):0)+(k==='freeze'?(b.startle||0):0))/tot;
+    return `<div class="bar"><div class="lab"><span>${n}</span><em>${num(v*100,1)}%</em></div><div class="track"><div class="fill" style="width:${v*100}%"></div></div></div>`; }).join('');
+  const el=lab.t-lab.sessionStart;
+  $('#ethoKv').innerHTML=`<span>Tempo de sessão</span><span>${fmt(el)}</span><span>Pressões à barra na sessão</span><span>${lab.stats.sessPresses}</span><span>Taxa média na sessão</span><span>${el>5?num(lab.stats.sessPresses/(el/60),1):'0,0'} resp/min</span>`;
+}
+
+/* ---------- treino de observação ---------- */
+const CATS=['Andar / explorar','Farejar parado','Lavar o rosto','Coçar-se','Lamber-se','Erguer-se','Beber','Na barra','No comedouro','Imóvel'];
+const obs={on:false,t0:0,next:0,sel:-1,prev:-1,n:0,hit:0,u:[],m:[]};
+$('#obsKeys').innerHTML=CATS.map((c,i)=>`<button data-cat="${i}" aria-pressed="false"><kbd>${(i+1)%10}</kbd> ${c}</button>`).join('');
+function catOf(a){
+  if(a.cls==='freeze'||a.cls==='startle') return 9;
+  if(a.cls==='eat') return 8;
+  if(a.phase==='move') return 0;
+  return {explore:0,sniff:1,groom:2,scratch:3,lick:4,rear:5,drink:6,nearLever:7,rearLever:7,press:7,check:8}[a.cls];
+}
+function pickCat(i){ obs.sel=i; $$('#obsKeys button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.cat===i))); }
+$('#obsKeys').addEventListener('click',e=>{ const b=e.target.closest('[data-cat]'); if(b) pickCat(+b.dataset.cat); });
+$('#btnObs').addEventListener('click',()=>{
+  if(obs.on){ obs.on=false; $('#btnObs').textContent='Iniciar registro de 90 s'; $('#obsInfo').textContent='Registro cancelado.'; return; }
+  Object.assign(obs,{on:true,t0:lab.t,next:lab.t+0.5,sel:-1,prev:catOf(lab.rat.act),n:0,hit:0,u:[],m:[]}); pickCat(-1);
+  speed=1; $$('[data-speed]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.speed==='1')));
+  if(paused) $('#btnPause').click();
+  $('#btnObs').textContent='Cancelar registro'; curEx=null; showEx('obs');
+});
+function obsTick(){
+  if(!obs.on) return;
+  while(lab.t>=obs.next&&obs.on){
+    const cur=catOf(lab.rat.act), m=(obs.sel===obs.prev&&obs.sel!==cur)?obs.prev:cur;
+    obs.u.push(obs.sel); obs.m.push(m); obs.n++; if(obs.sel===m) obs.hit++; obs.prev=cur; obs.next+=0.5;
+    if(obs.next>obs.t0+90) obsEnd();
+  }
+  if(obs.on) $('#obsInfo').textContent=`Registrando: faltam ${fmt(obs.t0+90-lab.t)}. Categoria atual: ${obs.sel<0?'nenhuma':CATS[obs.sel]}.`;
+}
+function obsEnd(){
+  obs.on=false; $('#btnObs').textContent='Iniciar registro de 90 s';
+  const n=obs.n, p0=obs.hit/n; let pe=0; const conf={};
+  for(let c=0;c<10;c++){ pe+=(obs.u.filter(x=>x===c).length/n)*(obs.m.filter(x=>x===c).length/n); }
+  for(let i=0;i<n;i++) if(obs.u[i]!==obs.m[i]){ const k=obs.m[i]+'>'+obs.u[i]; conf[k]=(conf[k]||0)+1; }
+  const kap=pe>=1?1:(p0-pe)/(1-pe), worst=Object.entries(conf).sort((a,b)=>b[1]-a[1])[0];
+  let msg=`Concordância de ${num(p0*100,0)}% em ${n} intervalos de 0,5 s; kappa de Cohen = ${num(kap)}.`;
+  if(worst){ const [m,u]=worst[0].split('>').map(Number); msg+=` Divergência mais comum: o rato estava em “${CATS[m]}” e você registrou “${u<0?'nada':CATS[u]}”.`; }
+  $('#obsInfo').textContent=msg; log('Treino de observação. '+msg);
+}
+
+/* ---------- arquivo e parâmetros ---------- */
+const PDEF={alpha:P.alpha,beta:P.beta,tauTr:P.tauTr,alphaV:P.alphaV};
+function syncParams(){
+  $$('[data-p]').forEach(i=>{ i.value=P[i.dataset.p]; $('#'+i.id+'V').textContent=num(+i.value,i.dataset.p==='beta'?3:2); });
+  $('#insat').checked=lab.insatiable; $('#varDist').value=lab.varDist;
+}
+$$('[data-p]').forEach(i=>i.addEventListener('input',()=>{ P[i.dataset.p]=+i.value; syncParams(); }));
+$('#insat').addEventListener('change',e=>{ lab.insatiable=e.target.checked; if(lab.insatiable) lab.hunger=1; log(lab.insatiable?'Saciação desligada: rato insaciável.':'Saciação religada.'); });
+$('#varDist').addEventListener('change',e=>{ lab.varDist=e.target.value; });
+$('#btnDefaults').addEventListener('click',()=>{ Object.assign(P,PDEF); lab.insatiable=false; lab.varDist='exp'; syncParams(); });
+let saves=[];
+try{ saves=JSON.parse(localStorage.getItem('labop-pontos')||'[]'); }catch(_){ saves=[]; }
+function persist(){ try{ localStorage.setItem('labop-pontos',JSON.stringify(saves)); }catch(_){ $('#fileMsg').textContent='Ponto salvo só nesta aba: o navegador não permitiu gravar.'; } }
+function snapshot(){
+  return {app:'laboratorio-operante',v:1,nome:`Sessão ${lab.session}, ${fmt(lab.t-lab.sessionStart)} · ${lab.schedLabel()}`,
+    P:{alpha:P.alpha,beta:P.beta,tauTr:P.tauTr,alphaV:P.alphaV},lab:lab.serialize(),ui:{flags:Object.assign({},flags),done:[...doneSet]}};
+}
+function restore(o){
+  if(!o||o.app!=='laboratorio-operante'||!o.lab||!Array.isArray(o.lab.presses)) throw new Error('formato');
+  Object.assign(P,PDEF,o.P||{}); lab.load(o.lab);
+  if(o.ui){ for(const k in flags) if(k in (o.ui.flags||{})) flags[k]=o.ui.flags[k]; doneSet.clear(); (o.ui.done||[]).forEach(k=>doneSet.add(k)); }
+  obs.on=false; syncParams(); renderTrials(); renderSteps(); log(`Rato restaurado: ${o.nome||'arquivo'}.`);
+}
+function renderSaves(){
+  $('#saves').innerHTML=saves.map((s,i)=>`<li><span>${s.nome}</span><span><button data-load="${i}">Restaurar</button> <button data-del="${i}">Excluir</button></span></li>`).join('');
+}
+$('#btnSave').addEventListener('click',()=>{ saves.unshift(snapshot()); if(saves.length>6) saves.pop(); persist(); renderSaves(); log('Ponto salvo: '+saves[0].nome+'.'); });
+$('#saves').addEventListener('click',e=>{
+  const l=e.target.closest('[data-load]'), d=e.target.closest('[data-del]');
+  if(l){ try{ restore(saves[+l.dataset.load]); }catch(_){ $('#fileMsg').textContent='Este ponto está corrompido e não pôde ser restaurado.'; } }
+  if(d){ saves.splice(+d.dataset.del,1); persist(); renderSaves(); }
+});
+$('#btnDownload').addEventListener('click',()=>{
+  try{
+    const url=URL.createObjectURL(new Blob([JSON.stringify(snapshot())],{type:'application/json'}));
+    const a=document.createElement('a'); a.href=url; a.download='rato-tico-sessao-'+lab.session+'.json'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    $('#fileMsg').textContent='Arquivo gerado. Se nada foi baixado, esta visualização bloqueia downloads: use Salvar ponto ou a versão exportada.';
+  }catch(_){ $('#fileMsg').textContent='Não foi possível gerar o arquivo neste navegador. Use Salvar ponto.'; }
+});
+$('#btnOpen').addEventListener('click',()=>$('#fileOpen').click());
+$('#fileOpen').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ restore(JSON.parse(rd.result)); $('#fileMsg').textContent='Arquivo aberto: '+f.name+'.'; }catch(_){ $('#fileMsg').textContent='Este arquivo não é um rato salvo pelo Laboratório Operante. Escolha um .json gerado por Baixar arquivo.'; } };
+  rd.onerror=()=>{ $('#fileMsg').textContent='Não foi possível ler o arquivo.'; };
+  rd.readAsText(f); e.target.value='';
+});
+$('#btnMap').addEventListener('click',e=>{ showMap=!showMap; e.currentTarget.setAttribute('aria-pressed',String(showMap)); if(showMap){ curEx=null; showEx('loc'); } });
+syncParams(); renderSaves();
+
+/* ---------- desenho ---------- */
+let C={};
+function readTheme(){ const cs=getComputedStyle(document.documentElement);
+  for(const k of ['bg','ink','muted','line','accent','food','shock','paper','paper-grid','pen','floor','rod','wall','metal','fur','hood','skin','raised']) C[k]=cs.getPropertyValue('--'+k).trim(); }
+function fit(cv){ const dpr=Math.min(2,window.devicePixelRatio||1), r=cv.getBoundingClientRect();
+  const w=Math.max(10,Math.round(r.width*dpr)), h=Math.max(10,Math.round(r.height*dpr));
+  if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; } return dpr; }
+
+const chamber=$('#chamber'), cx=chamber.getContext('2d');
+let hdS=Math.PI, showMap=false;
+function drawChamber(now){
+  const dpr=fit(chamber), s=chamber.width/GEO.W, r=lab.rat, T=now/1000, cs=lab.cs;
+  cx.setTransform(s,0,0,s,0,0);
+  cx.fillStyle=C.floor; cx.fillRect(0,0,100,64);
+  const shock=r.shockAnim>0;
+  cx.lineWidth=0.35; cx.strokeStyle=shock?C.shock:C.rod; cx.beginPath();
+  for(let x=2;x<100;x+=3.5){ cx.moveTo(x,GEO.wall); cx.lineTo(x,64); } cx.stroke();
+  // parede de instrumentos
+  cx.fillStyle=C.wall; cx.fillRect(0,0,100,GEO.wall);
+  cx.font='500 2.1px "IBM Plex Mono",monospace'; cx.textAlign='center'; cx.fillStyle=C.bg;
+  cx.fillText('LUZ',12,2.6); cx.fillText('BARRA',28,2.6); cx.fillText('COMEDOURO',54,2.6); cx.fillText('ÁGUA',68,2.6); cx.fillText('ALTO-FALANTE',84,2.6);
+  // luz
+  const lit=cs&&cs.light;
+  if(lit){ const g=cx.createRadialGradient(12,5.4,0.5,12,5.4,14); g.addColorStop(0,C.food); g.addColorStop(1,'transparent'); cx.globalAlpha=0.55; cx.fillStyle=g; cx.fillRect(0,0,30,24); cx.globalAlpha=1; }
+  cx.beginPath(); cx.arc(12,5.4,1.6,0,7); cx.fillStyle=lit?C.food:C.metal; cx.fill(); cx.lineWidth=0.3; cx.strokeStyle=C.ink; cx.stroke();
+  // alto-falante
+  cx.fillStyle=C.ink; for(let i=0;i<5;i++) for(let j=0;j<2;j++){ cx.beginPath(); cx.arc(80+i*2,4.4+j*1.8,0.45,0,7); cx.fill(); }
+  if(cs&&cs.tone){ cx.strokeStyle=C.accent; cx.lineWidth=0.45; for(let i=0;i<3;i++){ const ph=((T*1.2+i/3)%1); cx.globalAlpha=1-ph; cx.beginPath(); cx.arc(84,GEO.wall,2+ph*9,0.15*Math.PI,0.85*Math.PI); cx.stroke(); } cx.globalAlpha=1; }
+  // comedouro
+  cx.fillStyle=C.ink; cx.beginPath(); cx.roundRect(48,3.6,12,5.6,1.2); cx.fill();
+  if(lab.pellets.length){ cx.fillStyle=C.food; lab.pellets.slice(0,6).forEach((_,i)=>{ cx.beginPath(); cx.arc(51+i*1.6,7.4,0.75,0,7); cx.fill(); }); }
+  if(lab.t-lab.lastSR<0.5){ cx.strokeStyle=C.food; cx.lineWidth=0.5; cx.strokeRect(47.4,3,13.2,6.8); }
+  // bebedouro
+  cx.fillStyle=C.metal; cx.strokeStyle=C.ink; cx.lineWidth=0.3; cx.beginPath(); cx.roundRect(67.2,GEO.wall-1.6,1.6,3.8,0.7); cx.fill(); cx.stroke();
+  // mapa de aprendizagem (setores e círculo do comedouro)
+  if(showMap){
+    cx.font='500 2.4px "IBM Plex Mono",monospace'; cx.textAlign='center';
+    for(let i=0;i<9;i++){ const x=(i%3)*33.34, y=8+Math.floor(i/3)*18.67, v=lab.Ss[i];
+      cx.globalAlpha=0.5*v; cx.fillStyle=C.accent; cx.fillRect(x,y,33.34,18.67); cx.globalAlpha=1;
+      cx.strokeStyle=C.muted; cx.lineWidth=0.15; cx.strokeRect(x,y,33.34,18.67); cx.fillStyle=C.ink; cx.fillText(num(v),x+16.7,y+16.5); }
+    for(let j=0;j<10;j++){ const w=wallPoint(j), v=lab.Ss[9+j]; cx.fillStyle=C.food; cx.globalAlpha=0.15+0.85*v; cx.beginPath(); cx.arc(w[0],w[1]+(j<3?-2.5:j<6?2.5:0),1.2+1.6*v,0,7); cx.fill(); cx.globalAlpha=1; }
+    cx.strokeStyle=C.food; cx.lineWidth=0.4; cx.setLineDash([1.5,1.5]); cx.beginPath(); cx.arc(GEO.hopper.x,GEO.hopper.y,lab.closeR(),0,7); cx.stroke(); cx.setLineDash([]);
+  }
+  // barra
+  const dn=r.pressAnim>0?1.1:0;
+  cx.fillStyle=C.metal; cx.strokeStyle=C.ink; cx.lineWidth=0.3; cx.beginPath(); cx.roundRect(24,GEO.wall-1.2,8,3.4-dn,0.5); cx.fill(); cx.stroke();
+  // rato
+  const a=r.act, doing=a.phase==='do', moving=a.phase==='move';
+  let dh=r.hd-hdS; dh=Math.atan2(Math.sin(dh),Math.cos(dh)); hdS+=dh*0.25;
+  let L=7, Wd=3.3, k=1, headA=0, jx=0, jy=0;
+  const up=doing&&(a.cls==='rear'||a.cls==='rearLever'||a.cls==='press');
+  if(up){ L=4.6; k=1.12; }
+  let paws=false, leg=false;
+  if(doing&&a.cls==='groom'){ L=5.2; headA=0.12*Math.sin(T*14); paws=true; }
+  if(doing&&a.cls==='sniff'){ headA=0.55*Math.sin(T*3.2); }
+  if(doing&&a.cls==='scratch'){ L=5.6; headA=-0.7; jx=0.25*Math.sin(T*38); leg=true; }
+  if(doing&&a.cls==='lick'){ L=4.4; headA=2.0+0.15*Math.sin(T*7); }
+  if(doing&&a.cls==='drink'){ jy=0.25*Math.sin(T*12); }
+  if(doing&&a.cls==='eat'){ jx=0.35*Math.sin(T*16); }
+  if(a.cls==='startle'&&a.d>2.3){ jx=(Math.random()-0.5)*1.6; jy=(Math.random()-0.5)*1.6; k=1.15; }
+  const wig=moving?Math.sin(T*13)*0.1:0;
+  cx.save(); cx.translate(r.x+jx,r.y+jy);
+  cx.fillStyle=C.ink; cx.globalAlpha=0.16; cx.beginPath(); cx.ellipse(up?1:0.5,up?1.6:0.8,L+1,Wd+0.6,hdS,0,7); cx.fill(); cx.globalAlpha=1;
+  cx.rotate(hdS); cx.scale(k,k);
+  cx.strokeStyle=C.skin; cx.lineWidth=0.7; cx.lineCap='round'; cx.beginPath(); cx.moveTo(-L+0.5,0);
+  cx.quadraticCurveTo(-L-4,3*Math.sin(T*(moving?9:1.5)),-L-8.5,2.2*Math.sin(T*(moving?9:1.5)+1)); cx.stroke();
+  cx.rotate(wig);
+  cx.fillStyle=C.fur; cx.strokeStyle=C.ink; cx.lineWidth=0.22; cx.beginPath(); cx.ellipse(-0.8,0,L-0.6,Wd,0,0,7); cx.fill(); cx.stroke();
+  if(leg){ cx.fillStyle=C.skin; cx.beginPath(); cx.ellipse(-2+0.9*Math.sin(T*38),-Wd-0.2,1.5,0.6,0.5,0,7); cx.fill(); }
+  cx.translate(L*0.62,0); cx.rotate(headA);
+  cx.fillStyle=C.hood; cx.beginPath(); cx.ellipse(-1.2,0,2.9,2.7,0,0,7); cx.fill();
+  cx.beginPath(); cx.moveTo(0.2,-2.2); cx.quadraticCurveTo(5.2,-0.6,5.2,0); cx.quadraticCurveTo(5.2,0.6,0.2,2.2); cx.closePath(); cx.fill();
+  cx.fillStyle=C.skin; cx.beginPath(); cx.arc(-0.4,-2.3,1.15,0,7); cx.arc(-0.4,2.3,1.15,0,7); cx.fill();
+  cx.beginPath(); cx.arc(5.1,0,0.45,0,7); cx.fill();
+  const frozen=a.cls==='freeze'; const wt=frozen?0:Math.sin(T*18)*0.25;
+  cx.strokeStyle=C.ink; cx.lineWidth=0.12; cx.beginPath();
+  for(const sg of [-1,1]) for(const an of [0.5,0.9,1.3]){ cx.moveTo(4.2,sg*0.5); cx.lineTo(4.2+3*Math.cos(an+wt),sg*(0.5+3*Math.sin(an+wt))); } cx.stroke();
+  if(paws){ const px=3.3+0.7*Math.sin(T*14); cx.fillStyle=C.skin; cx.beginPath(); cx.ellipse(px,-0.9,0.9,0.5,0,0,7); cx.ellipse(px,0.9,0.9,0.5,0,0,7); cx.fill(); }
+  if(doing&&a.cls==='press'){ cx.fillStyle=C.skin; cx.beginPath(); cx.ellipse(4.6,-1.6,1,0.6,0,0,7); cx.ellipse(4.6,1.6,1,0.6,0,0,7); cx.fill(); }
+  cx.restore();
+  if(shock){ cx.strokeStyle=C.shock; cx.lineWidth=0.5; cx.beginPath();
+    for(let i=0;i<5;i++){ const x=10+i*20, y=20+((i*37)%30); cx.moveTo(x,y); cx.lineTo(x+2,y+3); cx.lineTo(x-1,y+4); cx.lineTo(x+1.5,y+8); } cx.stroke(); }
+}
+
+const rec=$('#record'), rx=rec.getContext('2d');
+function drawRecord(){
+  const dpr=fit(rec), W=rec.width/dpr, H=rec.height/dpr;
+  rx.setTransform(dpr,0,0,dpr,0,0); rx.clearRect(0,0,W,H);
+  const win=+$('#recWin').value, YM=win>=3600?500:200;
+  const pl=38, pr=8, pt=16, evH=10, pb=18+evH;
+  const t1=Math.max(win,lab.t), t0=t1-win, pw=W-pl-pr, ph=H-pt-pb;
+  const X=t=>pl+(t-t0)/win*pw, Y=c=>pt+ph-(c/YM)*ph;
+  rx.font='10px "IBM Plex Mono",monospace'; rx.lineWidth=1;
+  rx.strokeStyle=C['paper-grid']; rx.fillStyle=C.muted; rx.beginPath();
+  for(let i=0;i<=4;i++){ const y=Y(YM*i/4); rx.moveTo(pl,y+0.5); rx.lineTo(W-pr,y+0.5); }
+  const stepT=win/10, tf=Math.ceil(t0/stepT)*stepT;
+  for(let t=tf;t<=t1+1e-6;t+=stepT){ const x=Math.round(X(t))+0.5; rx.moveTo(x,pt); rx.lineTo(x,pt+ph); }
+  rx.stroke();
+  for(let k=Math.ceil(t0/300);k*300<=t1;k++){ const x=Math.round(X(k*300))+0.5; rx.strokeStyle=C.muted; rx.globalAlpha=0.55; rx.setLineDash(k%2?[2,3]:[]);
+    rx.beginPath(); rx.moveTo(x,pt); rx.lineTo(x,pt+ph); rx.stroke(); rx.setLineDash([]); rx.globalAlpha=1; }
+  rx.textAlign='right'; rx.textBaseline='middle';
+  for(let i=0;i<=4;i++) rx.fillText(String(YM*i/4),pl-5,Y(YM*i/4));
+  rx.textAlign='center'; rx.textBaseline='top';
+  for(let t=tf,i=0;t<=t1+1e-6;t+=stepT,i++) if(i%2===0) rx.fillText(fmt(t),X(t),pt+ph+evH+4);
+  // marcas de fase
+  rx.textAlign='left'; rx.textBaseline='top';
+  for(const m of lab.marks) if(m.t>=t0){ const x=Math.round(X(m.t))+0.5;
+    rx.strokeStyle=C.muted; rx.setLineDash([3,3]); rx.beginPath(); rx.moveTo(x,pt); rx.lineTo(x,pt+ph); rx.stroke(); rx.setLineDash([]);
+    rx.fillStyle=C.ink; rx.fillText(m.label,Math.min(x+3,W-pr-60),2); }
+  // pena
+  const P_=lab.presses; let i=lowerBound(P_,t0), cum=i;
+  rx.strokeStyle=C.pen; rx.lineWidth=1.4; rx.lineJoin='round'; rx.beginPath(); rx.moveTo(pl,Y(cum%YM));
+  for(;i<P_.length;i++){ const x=X(P_[i]); rx.lineTo(x,Y(cum%YM)); cum++;
+    if(cum%YM===0){ rx.lineTo(x,Y(YM)); rx.lineTo(x,Y(0)); } else rx.lineTo(x,Y(cum%YM)); }
+  rx.lineTo(X(lab.t),Y(cum%YM)); rx.stroke();
+  rx.fillStyle=C.pen; rx.beginPath(); rx.arc(X(lab.t),Y(cum%YM),2.5,0,7); rx.fill();
+  // reforços
+  rx.strokeStyle=C.food; rx.lineWidth=1.6; rx.beginPath();
+  const R_=lab.reinf;
+  for(let j=lowerBound(R_,t0);j<R_.length;j++){ const c=lowerBound(P_,R_[j]+1e-9), x=X(R_[j]), y=Y(c%YM); rx.moveTo(x,y); rx.lineTo(x+4,y+6); }
+  rx.stroke();
+  // trilha de eventos
+  const ey=pt+ph+2;
+  const spans=lab.cs?lab.csSpans.concat([{t0:lab.cs.t0,t1:lab.t,tone:lab.cs.tone,light:lab.cs.light,us:false}]):lab.csSpans;
+  for(const sp of spans) if(sp.t1>=t0){ const xa=X(Math.max(t0,sp.t0)), xb=X(sp.t1);
+    rx.fillStyle=sp.tone?C.accent:C.food; rx.fillRect(xa,ey,Math.max(1.5,xb-xa),evH-3);
+    if(sp.tone&&sp.light){ rx.fillStyle=C.food; rx.fillRect(xa,ey+(evH-3)/2,Math.max(1.5,xb-xa),(evH-3)/2); }
+    if(sp.us){ rx.fillStyle=C.shock; rx.fillRect(xb,ey-2,2.5,evH+1); } }
+  rx.save(); rx.translate(10,pt+ph/2); rx.rotate(-Math.PI/2); rx.textAlign='center'; rx.textBaseline='middle'; rx.fillStyle=C.muted; rx.fillText('respostas',0,0); rx.restore();
+}
+
+/* ---------- laço ---------- */
+const NAMES={sniff:'farejando',scratch:'coçando-se',lick:'lambendo-se',drink:'bebendo água',explore:'explorando',groom:'lavando o rosto',rear:'erguendo-se',nearLever:'perto da barra',rearLever:'erguendo-se junto à barra',press:'pressionando a barra',check:'verificando o comedouro',toHopper:'indo ao comedouro',eat:'comendo',freeze:'congelado',startle:'reagindo ao choque'};
+let uiT=0, themeT=0;
+function ui(now){
+  $('#sub').textContent=`Sujeito R-07 “Tico” · sessão ${lab.session} · ${fmt(lab.t-lab.sessionStart)}`;
+  const a=lab.rat.act; $('#behav').textContent=obs.on?'registro em andamento':(a.phase==='move'&&a.cls!=='explore'&&a.cls!=='toHopper'&&a.cls!=='check')?'indo até '+(a.cls==='press'||a.cls==='nearLever'||a.cls==='rearLever'?'a barra':'outro ponto'):NAMES[a.cls];
+  $('#mRate').textContent=num(lab.rate(60),0); $('#mPress').textContent=lab.stats.sessPresses; $('#mSr').textContent=lab.stats.sessReinf; $('#mSched').textContent=lab.schedLabel();
+  const q=lab.queue.length;
+  $('#qInfo').textContent=lab.cs?`Estímulo ligado (${fmt(lab.cs.t1-lab.t)} restantes) · ${q} na fila`:(q?`${q} na fila · próxima em ${fmt(lab.nextTrialAt-lab.t)}`:'Fila vazia.');
+  if(!$('[data-panel="modelo"]').hidden) renderVars();
+  if(!$('[data-panel="etograma"]').hidden) renderEtho();
+  obsTick();
+  monitors(); checkSteps();
+}
+function frame(now){
+  const real=Math.min(0.1,(now-last)/1000); last=now;
+  if(!paused){ acc+=real*speed; let n=0; while(acc>=DT&&n<3000){ lab.step(DT); acc-=DT; n++; } if(n>=3000) acc=0; }
+  drain(); syncTone();
+  if(now-themeT>700){ readTheme(); themeT=now; }
+  drawChamber(now); drawRecord();
+  if(now-uiT>200){ ui(now); uiT=now; }
+  requestAnimationFrame(frame);
+}
+readTheme(); showEx('base'); renderTrials(); log('Rato ingênuo colocado na câmara. Esquema: CRF.');
+requestAnimationFrame(frame);
+})();
+</script>

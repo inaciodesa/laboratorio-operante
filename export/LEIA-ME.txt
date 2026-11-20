@@ -1,0 +1,14 @@
+LABORATÓRIO OPERANTE
+Autora: Alana Campos de Sá
+
+Como usar
+1. Abra o arquivo laboratorio-operante.html em qualquer navegador (Chrome, Edge, Firefox, Safari),
+   no computador, tablet ou celular. Basta dar dois cliques.
+2. Não precisa de internet, instalação nem servidor. Tudo está dentro desse único arquivo.
+3. Para guardar o progresso do rato, use a aba "Arquivo e parâmetros": "Salvar ponto" guarda no
+   navegador; "Baixar arquivo" gera um .json que pode ser aberto em outro computador.
+
+Licença: domínio público (The Unlicense). Use, copie e modifique sem restrições.
+
+Base: Graham, J., Alloway, T., & Krames, L. (1994). Sniffy, the virtual rat: Simulated operant
+conditioning. Behavior Research Methods, Instruments, & Computers, 26(2), 134-141.
